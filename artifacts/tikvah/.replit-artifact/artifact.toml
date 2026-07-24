@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Tikvah"
+version = "1.0.0"
+id = "artifacts/tikvah"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24918
+
+[services.development]
+run = "pnpm --filter @workspace/tikvah run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tikvah", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tikvah/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24918"
+BASE_PATH = "/"
