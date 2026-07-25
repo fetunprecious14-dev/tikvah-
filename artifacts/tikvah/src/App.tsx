@@ -11,6 +11,13 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import NotFound from '@/pages/not-found';
+import {
+  clearPrivateJournal,
+  createJournalEntry,
+  readPrivateJournal,
+  writePrivateJournal,
+  type JournalEntry,
+} from '@/lib/privateJournal';
 
 const queryClient = new QueryClient();
 
@@ -94,10 +101,10 @@ function Shell({ children }: { children: ReactNode }) {
   return <div className="site-shell grain"><Header /><main>{children}</main><Footer /></div>;
 }
 
-function Button({ children, onClick, href, secondary = false, testId = 'button-action', type = 'button' }: { children: ReactNode; onClick?: () => void; href?: string; secondary?: boolean; testId?: string; type?: 'button' | 'submit' }) {
-  const cls = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[13px] font-semibold transition duration-300 ${secondary ? 'border border-border bg-background text-foreground hover:border-primary hover:text-primary' : 'bg-primary text-primary-foreground hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(44,80,60,.18)]'}`;
+function Button({ children, onClick, href, secondary = false, testId = 'button-action', type = 'button', disabled = false }: { children: ReactNode; onClick?: () => void; href?: string; secondary?: boolean; testId?: string; type?: 'button' | 'submit'; disabled?: boolean }) {
+  const cls = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[13px] font-semibold transition duration-300 ${secondary ? 'border border-border bg-background text-foreground hover:border-primary hover:text-primary' : 'bg-primary text-primary-foreground hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(44,80,60,.18)]'} ${disabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`;
   if (href) return <Link href={href} className={cls} data-testid={testId}>{children}</Link>;
-  return <button type={type} onClick={onClick} className={cls} data-testid={testId}>{children}</button>;
+  return <button type={type} onClick={onClick} disabled={disabled} className={cls} data-testid={testId}>{children}</button>;
 }
 
 function PageIntro({ eyebrow, title, children }: { eyebrow: string; title: React.ReactNode; children: React.ReactNode }) {
@@ -178,13 +185,71 @@ function Resources() {
 }
 
 function Journal() {
-  const [entries, setEntries] = useState<{ id: number; text: string; date: string }[]>(() => { try { return JSON.parse(localStorage.getItem('tikvah-entries') || '[]'); } catch { return []; } });
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [anonymousId, setAnonymousId] = useState('');
+  const [journalReady, setJournalReady] = useState(false);
+  const [journalError, setJournalError] = useState('');
   const [text, setText] = useState('');
   const [saved, setSaved] = useState(false);
-  const save = () => { if (!text.trim()) return; const next = [{ id: Date.now(), text: text.trim(), date: new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date()) }, ...entries]; setEntries(next); localStorage.setItem('tikvah-entries', JSON.stringify(next)); setText(''); setSaved(true); setTimeout(() => setSaved(false), 2500); };
-  const clearAll = () => { setEntries([]); localStorage.removeItem('tikvah-entries'); };
-  return <Shell><PageIntro eyebrow="Your private journal" title={<>A place for the words that need somewhere to go.</>}>This journal is yours alone. It stays in this browser, on this device. You do not need an account, and you never need to share what you write.</PageIntro>
-    <section className="mx-auto grid max-w-[1220px] gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[26px] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex items-center justify-between border-b border-border pb-5"><span className="flex items-center gap-2 text-xs font-semibold text-primary"><span className="size-2 rounded-full bg-accent" /> New entry</span><span className="text-xs text-muted-foreground"><LockKeyhole size={12} className="mr-1 inline" /> Local only</span></div><textarea value={text} onChange={e => setText(e.target.value)} data-testid="textarea-journal" className="mt-7 min-h-[300px] w-full resize-none bg-transparent font-serif text-[27px] leading-[1.3] outline-none placeholder:text-muted-foreground/55 sm:min-h-[360px] sm:text-4xl" placeholder="What would you like to put down?" /><div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-muted-foreground">{text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.'}</span><Button onClick={save} testId="button-save-entry">{saved ? <><Check size={15} /> Saved here</> : <>Save privately <ArrowRight size={15} /></>}</Button></div></div><aside><p className="text-[11px] font-semibold uppercase tracking-[.2em] text-primary">A gentle prompt</p><p className="mt-4 font-serif text-3xl leading-tight">What is asking to be noticed?</p><p className="mt-4 text-sm leading-6 text-muted-foreground">You do not have to solve it today. Just let it be seen by you.</p><div className="mt-10 border-t border-border pt-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Past entries</h2>{entries.length > 0 && <button onClick={clearAll} data-testid="button-clear-entries" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive">Clear all</button>}</div>{entries.length ? <div className="mt-5 space-y-3">{entries.slice(0, 4).map(e => <div key={e.id} data-testid={`entry-${e.id}`} className="rounded-xl border border-border bg-card p-4"><p className="line-clamp-3 text-sm leading-6">{e.text}</p><p className="mt-3 text-[11px] text-muted-foreground">{e.date}</p></div>)}</div> : <div className="mt-5 rounded-xl bg-secondary/50 p-5 text-sm leading-6 text-muted-foreground">Your saved entries will gently gather here. They are not sent anywhere.</div>}</div></aside></section>
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    readPrivateJournal()
+      .then(payload => {
+        if (!mounted) return;
+        setEntries(payload.entries);
+        setAnonymousId(payload.anonymousId);
+        setJournalReady(true);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setJournalError('We could not unlock the private journal on this device. Your saved writing was not changed.');
+        setJournalReady(true);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  const save = async () => {
+    if (!text.trim() || !journalReady || journalError || saving) return;
+    setSaving(true);
+    try {
+      const nextEntry = createJournalEntry(text, anonymousId);
+      const next = [nextEntry, ...entries];
+      await writePrivateJournal({ anonymousId, entries: next });
+      setEntries(next);
+      setText('');
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setJournalError('This entry could not be encrypted and saved. Your writing remains only in the text area.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearAll = () => {
+    clearPrivateJournal();
+    setEntries([]);
+    setAnonymousId('');
+    setSaved(false);
+    setJournalError('');
+    readPrivateJournal().then(payload => {
+      setAnonymousId(payload.anonymousId);
+      setJournalReady(true);
+    }).catch(() => setJournalError('The journal is ready for new writing, but encryption could not be prepared.'));
+  };
+
+  const formatTimestamp = (timestamp: string) => new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp));
+
+  return <Shell><PageIntro eyebrow="Your private journal" title={<>A place for the words that need somewhere to go.</>}>This journal is yours alone. It stays encrypted in this browser, on this device. No account, name, email, or location is ever requested.</PageIntro>
+    <section className="mx-auto grid max-w-[1220px] gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[26px] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex items-center justify-between border-b border-border pb-5"><span className="flex items-center gap-2 text-xs font-semibold text-primary"><span className="size-2 rounded-full bg-accent" /> New entry</span><span className="text-xs text-muted-foreground"><LockKeyhole size={12} className="mr-1 inline" /> {journalReady ? 'Encrypted on this device' : 'Preparing private space'}</span></div><textarea value={text} onChange={e => setText(e.target.value)} disabled={!journalReady || Boolean(journalError)} data-testid="textarea-journal" className="mt-7 min-h-[300px] w-full resize-none bg-transparent font-serif text-[27px] leading-[1.3] outline-none placeholder:text-muted-foreground/55 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[360px] sm:text-4xl" placeholder={journalReady ? 'What would you like to put down?' : 'Preparing a private page…'} /><div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-muted-foreground">{journalError || (text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.')}</span><Button onClick={save} disabled={!journalReady || Boolean(journalError) || saving || !text.trim()} testId="button-save-entry">{saved ? <><Check size={15} /> Saved here</> : saving ? <>Encrypting…</> : <>Save privately <ArrowRight size={15} /></>}</Button></div></div><aside><p className="text-[11px] font-semibold uppercase tracking-[.2em] text-primary">A gentle prompt</p><p className="mt-4 font-serif text-3xl leading-tight">What is asking to be noticed?</p><p className="mt-4 text-sm leading-6 text-muted-foreground">You do not have to solve it today. Just let it be seen by you.</p><div className="mt-10 border-t border-border pt-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Past entries</h2>{entries.length > 0 && <button onClick={clearAll} data-testid="button-clear-entries" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive">Clear all</button>}</div>{entries.length ? <div className="mt-5 space-y-3">{entries.slice(0, 4).map(e => <div key={e.id} data-testid={`entry-${e.id}`} className="rounded-xl border border-border bg-card p-4"><p className="line-clamp-3 text-sm leading-6">{e.text}</p><time dateTime={e.timestamp} className="mt-3 block text-[11px] text-muted-foreground">{formatTimestamp(e.timestamp)} · Anonymous</time></div>)}</div> : <div className="mt-5 rounded-xl bg-secondary/50 p-5 text-sm leading-6 text-muted-foreground">Your saved entries will gently gather here. They are encrypted and not sent anywhere.</div>}</div></aside></section>
   </Shell>;
 }
 
@@ -207,7 +272,7 @@ function Therapists() {
 }
 
 function Privacy() {
-  return <Shell><PageIntro eyebrow="Your privacy, plainly" title={<>You should not have to trade privacy for a place to breathe.</>}>Tikvah is built to ask for less. Here is what that means in everyday language.</PageIntro><section className="mx-auto max-w-[850px] px-5 pb-24 sm:px-8"><div className="space-y-10">{[['What we collect', 'Nothing by default. You can use the journal without an account, and your entries are stored locally in your browser. We do not see, read, or receive them.'], ['What stays with you', 'Your writing, preferences, and theme setting remain on your device. Clearing your browser data may remove them, so export or copy anything you want to keep.'], ['What we do not do', 'We do not sell personal information, build advertising profiles, or use your private writing to train a model.'], ['A note about resources', 'When you choose to open an external support link or contact a therapist, that interaction is governed by their privacy practices, not ours.'], ['Questions', 'If you have a concern about privacy or safety, reach out at hello@tikvah.space. We will answer as plainly as we can.']].map(([title, copy], i) => <article key={title} className="border-t border-border pt-7"><div className="flex gap-6"><span className="font-mono text-xs text-accent">0{i + 1}</span><div><h2 className="font-serif text-3xl">{title}</h2><p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">{copy}</p></div></div></article>)}</div><div className="mt-14 rounded-2xl bg-secondary/60 p-6 text-sm leading-6 text-muted-foreground"><ShieldCheck className="mb-3 text-primary" size={19} /> This is a presentation experience, not legal advice. For a production launch, Tikvah would publish a reviewed, jurisdiction-specific privacy policy.</div></section></Shell>;
+  return <Shell><PageIntro eyebrow="Your privacy, plainly" title={<>You should not have to trade privacy for a place to breathe.</>}>Tikvah is built to ask for less. Here is what that means in everyday language.</PageIntro><section className="mx-auto max-w-[850px] px-5 pb-24 sm:px-8"><div className="space-y-10">{[['What we collect', 'Nothing by default. You can use the journal without an account, and your entries are encrypted locally in your browser. We do not see, read, or receive them.'], ['What stays with you', 'Your writing, preferences, and theme setting remain on your device. Journal text is protected with AES-GCM encryption before it is written to browser storage. Clearing your browser data may remove it, so copy anything you want to keep.'], ['What we do not do', 'We do not sell personal information, build advertising profiles, or use your private writing to train a model.'], ['A note about resources', 'When you choose to open an external support link or contact a therapist, that interaction is governed by their privacy practices, not ours.'], ['Questions', 'If you have a concern about privacy or safety, reach out at hello@tikvah.space. We will answer as plainly as we can.']].map(([title, copy], i) => <article key={title} className="border-t border-border pt-7"><div className="flex gap-6"><span className="font-mono text-xs text-accent">0{i + 1}</span><div><h2 className="font-serif text-3xl">{title}</h2><p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">{copy}</p></div></div></article>)}</div><div className="mt-14 rounded-2xl bg-secondary/60 p-6 text-sm leading-6 text-muted-foreground"><ShieldCheck className="mb-3 text-primary" size={19} /> This is a presentation experience, not legal advice. For a production launch, Tikvah would publish a reviewed, jurisdiction-specific privacy policy.</div></section></Shell>;
 }
 
 function Crisis() {
