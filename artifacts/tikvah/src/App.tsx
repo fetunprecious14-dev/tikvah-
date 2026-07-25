@@ -19,6 +19,7 @@ import {
   type JournalEntry,
 } from '@/lib/privateJournal';
 import { assessSafety, type RiskCategory } from '@/lib/safety';
+import { analyzeEmotion, type EmotionAnalysis } from '@/lib/emotions';
 
 const queryClient = new QueryClient();
 
@@ -233,6 +234,7 @@ function Journal() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [safetyCategories, setSafetyCategories] = useState<RiskCategory[]>([]);
+  const [draftEmotion, setDraftEmotion] = useState<EmotionAnalysis | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -258,13 +260,17 @@ function Journal() {
       setSafetyCategories(safety.categories);
       return;
     }
+    const emotion = analyzeEmotion(text);
+    setDraftEmotion(emotion);
     setSaving(true);
     try {
       const nextEntry = createJournalEntry(text, anonymousId);
+      nextEntry.emotion = emotion;
       const next = [nextEntry, ...entries];
       await writePrivateJournal({ anonymousId, entries: next });
       setEntries(next);
       setText('');
+      setDraftEmotion(null);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -297,9 +303,24 @@ function Journal() {
   }).format(new Date(timestamp));
 
   return <Shell><PageIntro eyebrow="Your private journal" title={<>A place for the words that need somewhere to go.</>}>This journal is yours alone. It stays encrypted in this browser, on this device. No account, name, email, or location is ever requested.</PageIntro>
-    <section className="mx-auto grid max-w-[1220px] gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[26px] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex items-center justify-between border-b border-border pb-5"><span className="flex items-center gap-2 text-xs font-semibold text-primary"><span className="size-2 rounded-full bg-accent" /> New entry</span><span className="text-xs text-muted-foreground"><LockKeyhole size={12} className="mr-1 inline" /> {journalReady ? 'Encrypted on this device' : 'Preparing private space'}</span></div><textarea value={text} onChange={e => setText(e.target.value)} disabled={!journalReady || Boolean(journalError)} data-testid="textarea-journal" className="mt-7 min-h-[300px] w-full resize-none bg-transparent font-serif text-[27px] leading-[1.3] outline-none placeholder:text-muted-foreground/55 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[360px] sm:text-4xl" placeholder={journalReady ? 'What would you like to put down?' : 'Preparing a private page…'} /><div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-muted-foreground">{journalError || (text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.')}</span><Button onClick={save} disabled={!journalReady || Boolean(journalError) || saving || !text.trim()} testId="button-save-entry">{saved ? <><Check size={15} /> Saved here</> : saving ? <>Encrypting…</> : <>Save privately <ArrowRight size={15} /></>}</Button></div></div><aside><p className="text-[11px] font-semibold uppercase tracking-[.2em] text-primary">A gentle prompt</p><p className="mt-4 font-serif text-3xl leading-tight">What is asking to be noticed?</p><p className="mt-4 text-sm leading-6 text-muted-foreground">You do not have to solve it today. Just let it be seen by you.</p><div className="mt-10 border-t border-border pt-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Past entries</h2>{entries.length > 0 && <button onClick={clearAll} data-testid="button-clear-entries" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive">Clear all</button>}</div>{entries.length ? <div className="mt-5 space-y-3">{entries.slice(0, 4).map(e => <div key={e.id} data-testid={`entry-${e.id}`} className="rounded-xl border border-border bg-card p-4"><p className="line-clamp-3 text-sm leading-6">{e.text}</p><time dateTime={e.timestamp} className="mt-3 block text-[11px] text-muted-foreground">{formatTimestamp(e.timestamp)} · Anonymous</time></div>)}</div> : <div className="mt-5 rounded-xl bg-secondary/50 p-5 text-sm leading-6 text-muted-foreground">Your saved entries will gently gather here. They are encrypted and not sent anywhere.</div>}</div></aside></section>
+    <section className="mx-auto grid max-w-[1220px] gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[26px] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex items-center justify-between border-b border-border pb-5"><span className="flex items-center gap-2 text-xs font-semibold text-primary"><span className="size-2 rounded-full bg-accent" /> New entry</span><span className="text-xs text-muted-foreground"><LockKeyhole size={12} className="mr-1 inline" /> {journalReady ? 'Encrypted on this device' : 'Preparing private space'}</span></div><textarea value={text} onChange={e => { setText(e.target.value); setDraftEmotion(null); }} disabled={!journalReady || Boolean(journalError)} data-testid="textarea-journal" className="mt-7 min-h-[300px] w-full resize-none bg-transparent font-serif text-[27px] leading-[1.3] outline-none placeholder:text-muted-foreground/55 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[360px] sm:text-4xl" placeholder={journalReady ? 'What would you like to put down?' : 'Preparing a private page…'} />{draftEmotion && <EmotionSummary analysis={draftEmotion} /> }<div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-muted-foreground">{journalError || (text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.')}</span><Button onClick={save} disabled={!journalReady || Boolean(journalError) || saving || !text.trim()} testId="button-save-entry">{saved ? <><Check size={15} /> Saved here</> : saving ? <>Classifying quietly…</> : <>Save privately <ArrowRight size={15} /></>}</Button></div></div><aside><p className="text-[11px] font-semibold uppercase tracking-[.2em] text-primary">A gentle prompt</p><p className="mt-4 font-serif text-3xl leading-tight">What is asking to be noticed?</p><p className="mt-4 text-sm leading-6 text-muted-foreground">You do not have to solve it today. Just let it be seen by you.</p><div className="mt-10 border-t border-border pt-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Past entries</h2>{entries.length > 0 && <button onClick={clearAll} data-testid="button-clear-entries" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive">Clear all</button>}</div>{entries.length ? <div className="mt-5 space-y-3">{entries.slice(0, 4).map(e => <div key={e.id} data-testid={`entry-${e.id}`} className="rounded-xl border border-border bg-card p-4"><p className="line-clamp-3 text-sm leading-6">{e.text}</p>{e.emotion && <EmotionSummary analysis={e.emotion} compact /> }<time dateTime={e.timestamp} className="mt-3 block text-[11px] text-muted-foreground">{formatTimestamp(e.timestamp)} · Anonymous</time></div>)}</div> : <div className="mt-5 rounded-xl bg-secondary/50 p-5 text-sm leading-6 text-muted-foreground">Your saved entries will gently gather here. They are encrypted and not sent anywhere.</div>}</div></aside></section>
     {safetyCategories.length > 0 && <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/35 p-5 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="safety-title"><div className="w-full max-w-lg rounded-[24px] border border-border bg-card p-7 shadow-[var(--shadow-soft)] sm:p-10"><div className="flex items-start gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><AlertTriangle size={20} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[.17em] text-primary">Pause here</p><h2 id="safety-title" className="mt-2 font-serif text-3xl leading-tight">Your safety matters more than this entry.</h2></div></div><p className="mt-6 text-[15px] leading-7 text-muted-foreground">We noticed words that may point to an urgent safety concern. Your draft has not been saved, sent, or reflected on. Tikvah cannot provide emergency care.</p><p className="mt-4 text-sm leading-6 text-muted-foreground">If you may hurt yourself or someone else, or someone is hurting you, contact emergency services now or move toward a trusted person who can stay with you.</p><div className="mt-6 rounded-xl bg-secondary/65 p-4 text-xs leading-6 text-muted-foreground">Possible concerns detected: {safetyCategories.join(', ')}. This check is imperfect and does not monitor your safety outside this page.</div><div className="mt-7 flex flex-wrap gap-2"><a href="tel:112" data-testid="link-safety-call-112" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Call emergency services <Phone size={13} /></a><a href="tel:988" data-testid="link-safety-call-988" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold">Call or text 988 <Phone size={13} /></a><Link href="/crisis" data-testid="link-safety-crisis" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold">More support <ArrowUpRight size={13} /></Link></div><button onClick={closeSafetyAlert} data-testid="button-safety-close" className="mt-6 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Close and keep the draft on this device</button></div></div>}
   </Shell>;
+}
+
+function EmotionSummary({ analysis, compact = false }: { analysis: EmotionAnalysis; compact?: boolean }) {
+  return <div className={`emotion-summary ${compact ? 'emotion-summary-compact' : ''}`} data-testid="emotion-summary" aria-label="Private emotion classification">
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[10px] font-semibold uppercase tracking-[.16em] text-primary">Private emotional map</span>
+      <span className="text-[10px] text-muted-foreground">{analysis.confidence}% confidence</span>
+    </div>
+    <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+      <span><span className="block text-muted-foreground">Primary</span><strong className="mt-1 block font-medium capitalize">{analysis.primary}</strong></span>
+      <span><span className="block text-muted-foreground">Secondary</span><strong className="mt-1 block font-medium capitalize">{analysis.secondary ?? 'None detected'}</strong></span>
+      <span><span className="block text-muted-foreground">Intensity</span><strong className="mt-1 block font-medium">{analysis.intensity} / 10</strong></span>
+    </div>
+    {!compact && <p className="mt-3 text-[11px] leading-5 text-muted-foreground">This is a private, imperfect pattern check — not a diagnosis. It does not speak or send your writing anywhere.</p>}
+  </div>;
 }
 
 const therapists = [

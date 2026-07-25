@@ -1,3 +1,6 @@
+import type { EmotionAnalysis } from './emotions';
+import { analyzeEmotion } from './emotions';
+
 const JOURNAL_STORAGE_KEY = 'tikvah-private-journal-v1';
 const JOURNAL_KEY_STORAGE_KEY = 'tikvah-private-journal-key-v1';
 const LEGACY_STORAGE_KEY = 'tikvah-entries';
@@ -7,6 +10,7 @@ export type JournalEntry = {
   text: string;
   timestamp: string;
   anonymousId: string;
+  emotion?: EmotionAnalysis;
 };
 
 type JournalPayload = {
@@ -87,7 +91,16 @@ export async function readPrivateJournal(): Promise<JournalPayload> {
       key,
       fromBase64(record.ciphertext),
     );
-    return JSON.parse(new TextDecoder().decode(plaintext)) as JournalPayload;
+    const payload = JSON.parse(new TextDecoder().decode(plaintext)) as JournalPayload;
+    const entries = payload.entries.map(entry => (
+      entry.emotion ? entry : { ...entry, emotion: analyzeEmotion(entry.text) }
+    ));
+    if (entries.some((entry, index) => entry !== payload.entries[index])) {
+      const upgradedPayload = { ...payload, entries };
+      await writePrivateJournal(upgradedPayload);
+      return upgradedPayload;
+    }
+    return payload;
   }
 
   const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
@@ -109,6 +122,7 @@ export async function readPrivateJournal(): Promise<JournalPayload> {
         text: entry.text!.trim(),
         timestamp,
         anonymousId,
+        emotion: analyzeEmotion(entry.text!.trim()),
       };
     });
 
