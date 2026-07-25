@@ -1,5 +1,6 @@
 import type { EmotionAnalysis } from './emotions';
 import { analyzeEmotion } from './emotions';
+import { recommendResources, type ResourceRecommendation } from './recommendations';
 
 const JOURNAL_STORAGE_KEY = 'tikvah-private-journal-v1';
 const JOURNAL_KEY_STORAGE_KEY = 'tikvah-private-journal-key-v1';
@@ -11,6 +12,7 @@ export type JournalEntry = {
   timestamp: string;
   anonymousId: string;
   emotion?: EmotionAnalysis;
+  recommendations?: ResourceRecommendation[];
 };
 
 type JournalPayload = {
@@ -92,10 +94,18 @@ export async function readPrivateJournal(): Promise<JournalPayload> {
       fromBase64(record.ciphertext),
     );
     const payload = JSON.parse(new TextDecoder().decode(plaintext)) as JournalPayload;
-    const entries = payload.entries.map(entry => (
-      entry.emotion ? entry : { ...entry, emotion: analyzeEmotion(entry.text) }
-    ));
-    if (entries.some((entry, index) => entry !== payload.entries[index])) {
+    let needsUpgrade = false;
+    const entries = payload.entries.map(entry => {
+      const emotion = entry.emotion ?? analyzeEmotion(entry.text);
+      const recommendations = entry.recommendations
+        ? entry.recommendations.slice(0, 3)
+        : recommendResources(emotion.primary, emotion.secondary);
+      if (!entry.emotion || !entry.recommendations || entry.recommendations.length > 3) {
+        needsUpgrade = true;
+      }
+      return { ...entry, emotion, recommendations };
+    });
+    if (needsUpgrade) {
       const upgradedPayload = { ...payload, entries };
       await writePrivateJournal(upgradedPayload);
       return upgradedPayload;
@@ -117,12 +127,14 @@ export async function readPrivateJournal(): Promise<JournalPayload> {
       const timestamp = Number.isNaN(parsedDate.getTime())
         ? new Date().toISOString()
         : parsedDate.toISOString();
+      const emotion = analyzeEmotion(entry.text!.trim());
       return {
         id: `entry-${entry.id ?? window.crypto.randomUUID()}`,
         text: entry.text!.trim(),
         timestamp,
         anonymousId,
-        emotion: analyzeEmotion(entry.text!.trim()),
+        emotion,
+        recommendations: recommendResources(emotion.primary, emotion.secondary),
       };
     });
 

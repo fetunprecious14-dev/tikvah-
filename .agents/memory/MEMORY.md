@@ -1,2 +1,3 @@
 - [Tikvah safety boundary](tikvah-safety.md) — assess journal drafts locally before encryption, persistence, or any optional reflection request.
 - [Tikvah emotion classification](tikvah-emotion.md) — classify locally and silently; keep emotion metadata inside the encrypted journal payload.
+- [Tikvah resource recommendations](tikvah-recommendations.md) — offer at most three local, emotion-matched resources without turning support into a feed.
