@@ -5,7 +5,7 @@ import {
   ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, CircleHelp,
   Clock3, Copy, ExternalLink, Heart, Leaf, Menu, Moon, Phone, Search, ShieldCheck,
   Sun, X, Wind, LockKeyhole, SlidersHorizontal, MapPin, Languages,
-  MessageCircleHeart
+  MessageCircleHeart, AlertTriangle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -18,6 +18,7 @@ import {
   writePrivateJournal,
   type JournalEntry,
 } from '@/lib/privateJournal';
+import { assessSafety, type RiskCategory } from '@/lib/safety';
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,45 @@ function Footer() {
 
 function Shell({ children }: { children: ReactNode }) {
   return <div className="site-shell grain"><Header /><main>{children}</main><Footer /></div>;
+}
+
+function AgeGate({ children }: { children: ReactNode }) {
+  const [confirmed, setConfirmed] = useState(() => localStorage.getItem('tikvah-age-confirmed') === 'true');
+  const [underAge, setUnderAge] = useState(false);
+
+  if (confirmed) return <>{children}</>;
+
+  const enter = () => {
+    localStorage.setItem('tikvah-age-confirmed', 'true');
+    setConfirmed(true);
+  };
+
+  return <div className="age-gate grain min-h-dvh bg-[#dfe6dc] px-5 py-8 text-foreground dark:bg-[#17251f] sm:grid sm:place-items-center">
+    <main className="mx-auto w-full max-w-[430px] overflow-hidden rounded-[6px] border border-border bg-card shadow-[0_24px_70px_rgba(32,54,43,.16)]" aria-labelledby="age-gate-title">
+      <div className="px-7 pb-8 pt-10 text-center sm:px-10">
+        <p className="font-serif text-[26px] font-semibold">Welcome to Tikvah</p>
+        <div className="mx-auto mt-3 h-0.5 w-10 bg-primary/20" />
+        <h1 id="age-gate-title" className="sr-only">Adult entry confirmation</h1>
+        <p className="mx-auto mt-6 max-w-[300px] text-[15px] leading-6 text-muted-foreground">This is a safe space for adults (18+) to express themselves anonymously. Please confirm your age to enter.</p>
+        <div className="mt-7 grid gap-3">
+          <button onClick={enter} data-testid="button-age-adult" className="rounded-[3px] bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,50,34,.18)]">I am 18 or older</button>
+          <button onClick={() => setUnderAge(true)} data-testid="button-age-under-18" className="rounded-[3px] border border-foreground/80 bg-background px-5 py-3.5 text-sm font-semibold transition hover:border-primary hover:text-primary">I am under 18</button>
+        </div>
+        {underAge && <p role="status" className="mt-5 text-left text-sm leading-6 text-muted-foreground">Tikvah is currently designed for adults. If you feel unsafe, please contact a trusted adult or your local emergency service.</p>}
+      </div>
+      <div className="bg-primary px-7 py-7 text-primary-foreground sm:px-10">
+        <div className="flex gap-3"><AlertTriangle className="mt-0.5 shrink-0 text-primary-foreground/70" size={18} /><p className="text-sm leading-6">If you are in immediate danger or a crisis, please seek help immediately.</p></div>
+        <div className="mt-5 border-t border-primary-foreground/20 pt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-primary-foreground/65">Emergency resources</p>
+          <div className="mt-3 grid grid-cols-2 gap-5">
+            <div><p className="text-xs text-primary-foreground/65">Nigeria emergency</p><a href="tel:112" className="mt-1 block font-serif text-2xl">112</a></div>
+            <div><p className="text-xs text-primary-foreground/65">US & Canada crisis line</p><a href="tel:988" className="mt-1 block font-serif text-2xl">988</a></div>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-primary-foreground/65">Elsewhere, call your local emergency number or visit the <Link href="/crisis" className="underline underline-offset-4">crisis support page</Link>.</p>
+        </div>
+      </div>
+    </main>
+  </div>;
 }
 
 function Button({ children, onClick, href, secondary = false, testId = 'button-action', type = 'button', disabled = false }: { children: ReactNode; onClick?: () => void; href?: string; secondary?: boolean; testId?: string; type?: 'button' | 'submit'; disabled?: boolean }) {
@@ -192,6 +232,7 @@ function Journal() {
   const [text, setText] = useState('');
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [safetyCategories, setSafetyCategories] = useState<RiskCategory[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -212,6 +253,11 @@ function Journal() {
 
   const save = async () => {
     if (!text.trim() || !journalReady || journalError || saving) return;
+    const safety = assessSafety(text);
+    if (safety.risk === 'high') {
+      setSafetyCategories(safety.categories);
+      return;
+    }
     setSaving(true);
     try {
       const nextEntry = createJournalEntry(text, anonymousId);
@@ -227,6 +273,8 @@ function Journal() {
       setSaving(false);
     }
   };
+
+  const closeSafetyAlert = () => setSafetyCategories([]);
 
   const clearAll = () => {
     clearPrivateJournal();
@@ -250,6 +298,7 @@ function Journal() {
 
   return <Shell><PageIntro eyebrow="Your private journal" title={<>A place for the words that need somewhere to go.</>}>This journal is yours alone. It stays encrypted in this browser, on this device. No account, name, email, or location is ever requested.</PageIntro>
     <section className="mx-auto grid max-w-[1220px] gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[26px] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex items-center justify-between border-b border-border pb-5"><span className="flex items-center gap-2 text-xs font-semibold text-primary"><span className="size-2 rounded-full bg-accent" /> New entry</span><span className="text-xs text-muted-foreground"><LockKeyhole size={12} className="mr-1 inline" /> {journalReady ? 'Encrypted on this device' : 'Preparing private space'}</span></div><textarea value={text} onChange={e => setText(e.target.value)} disabled={!journalReady || Boolean(journalError)} data-testid="textarea-journal" className="mt-7 min-h-[300px] w-full resize-none bg-transparent font-serif text-[27px] leading-[1.3] outline-none placeholder:text-muted-foreground/55 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[360px] sm:text-4xl" placeholder={journalReady ? 'What would you like to put down?' : 'Preparing a private page…'} /><div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-muted-foreground">{journalError || (text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.')}</span><Button onClick={save} disabled={!journalReady || Boolean(journalError) || saving || !text.trim()} testId="button-save-entry">{saved ? <><Check size={15} /> Saved here</> : saving ? <>Encrypting…</> : <>Save privately <ArrowRight size={15} /></>}</Button></div></div><aside><p className="text-[11px] font-semibold uppercase tracking-[.2em] text-primary">A gentle prompt</p><p className="mt-4 font-serif text-3xl leading-tight">What is asking to be noticed?</p><p className="mt-4 text-sm leading-6 text-muted-foreground">You do not have to solve it today. Just let it be seen by you.</p><div className="mt-10 border-t border-border pt-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">Past entries</h2>{entries.length > 0 && <button onClick={clearAll} data-testid="button-clear-entries" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive">Clear all</button>}</div>{entries.length ? <div className="mt-5 space-y-3">{entries.slice(0, 4).map(e => <div key={e.id} data-testid={`entry-${e.id}`} className="rounded-xl border border-border bg-card p-4"><p className="line-clamp-3 text-sm leading-6">{e.text}</p><time dateTime={e.timestamp} className="mt-3 block text-[11px] text-muted-foreground">{formatTimestamp(e.timestamp)} · Anonymous</time></div>)}</div> : <div className="mt-5 rounded-xl bg-secondary/50 p-5 text-sm leading-6 text-muted-foreground">Your saved entries will gently gather here. They are encrypted and not sent anywhere.</div>}</div></aside></section>
+    {safetyCategories.length > 0 && <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/35 p-5 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="safety-title"><div className="w-full max-w-lg rounded-[24px] border border-border bg-card p-7 shadow-[var(--shadow-soft)] sm:p-10"><div className="flex items-start gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><AlertTriangle size={20} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[.17em] text-primary">Pause here</p><h2 id="safety-title" className="mt-2 font-serif text-3xl leading-tight">Your safety matters more than this entry.</h2></div></div><p className="mt-6 text-[15px] leading-7 text-muted-foreground">We noticed words that may point to an urgent safety concern. Your draft has not been saved, sent, or reflected on. Tikvah cannot provide emergency care.</p><p className="mt-4 text-sm leading-6 text-muted-foreground">If you may hurt yourself or someone else, or someone is hurting you, contact emergency services now or move toward a trusted person who can stay with you.</p><div className="mt-6 rounded-xl bg-secondary/65 p-4 text-xs leading-6 text-muted-foreground">Possible concerns detected: {safetyCategories.join(', ')}. This check is imperfect and does not monitor your safety outside this page.</div><div className="mt-7 flex flex-wrap gap-2"><a href="tel:112" data-testid="link-safety-call-112" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Call emergency services <Phone size={13} /></a><a href="tel:988" data-testid="link-safety-call-988" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold">Call or text 988 <Phone size={13} /></a><Link href="/crisis" data-testid="link-safety-crisis" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold">More support <ArrowUpRight size={13} /></Link></div><button onClick={closeSafetyAlert} data-testid="button-safety-close" className="mt-6 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Close and keep the draft on this device</button></div></div>}
   </Shell>;
 }
 
@@ -295,7 +344,7 @@ function Router() {
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><AgeGate><Router /></AgeGate></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;

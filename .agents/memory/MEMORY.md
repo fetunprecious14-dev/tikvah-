@@ -1,0 +1,1 @@
+- [Tikvah safety boundary](tikvah-safety.md) — assess journal drafts locally before encryption, persistence, or any optional reflection request.
