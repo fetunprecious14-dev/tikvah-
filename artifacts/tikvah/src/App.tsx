@@ -13,12 +13,15 @@ import { Resources } from '@/pages/resources';
 import { Login } from '@/pages/auth/login';
 import { Register } from '@/pages/auth/register';
 import { VerifyEmail } from '@/pages/auth/verify-email';
+import { ForgotPassword } from '@/pages/auth/forgot-password';
+import { ResetPassword } from '@/pages/auth/reset-password';
 import { Dashboard } from '@/pages/dashboard';
 import { Conversations } from '@/pages/conversations';
 import { ConversationThread } from '@/pages/conversation-thread';
 import { AdminInbox } from '@/pages/admin/inbox';
 import { AdminConversationThread } from '@/pages/admin/conversation-thread';
 import { AdminAnalytics } from '@/pages/admin/analytics';
+import { AdminResources } from '@/pages/admin/resources';
 
 function Router() {
   return (
@@ -31,6 +34,8 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
 
       <Route path="/dashboard">{() => <RequireAuth><Dashboard /></RequireAuth>}</Route>
       <Route path="/conversations">{() => <RequireAuth><Conversations /></RequireAuth>}</Route>
@@ -38,6 +43,7 @@ function Router() {
 
       <Route path="/admin">{() => <RequireAdmin><AdminInbox /></RequireAdmin>}</Route>
       <Route path="/admin/analytics">{() => <RequireAdmin><AdminAnalytics /></RequireAdmin>}</Route>
+      <Route path="/admin/resources">{() => <RequireAdmin><AdminResources /></RequireAdmin>}</Route>
       <Route path="/admin/conversations/:id">{params => <RequireAdmin><AdminConversationThread params={params} /></RequireAdmin>}</Route>
 
       <Route component={NotFound} />

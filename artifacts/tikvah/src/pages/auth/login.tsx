@@ -58,7 +58,12 @@ export function Login() {
             {errors.email && <p className="mt-1.5 text-xs text-destructive">{errors.email.message}</p>}
           </div>
           <div>
-            <label htmlFor="password" className="text-xs font-semibold text-muted-foreground">Password</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-xs font-semibold text-muted-foreground">Password</label>
+              <Link href="/forgot-password" className="text-xs text-primary underline underline-offset-4" data-testid="link-forgot-password">
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

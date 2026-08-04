@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, usersTable, emailVerificationTokensTable } from "@workspace/db";
-import { RegisterUserBody, LoginUserBody, VerifyEmailBody } from "@workspace/api-zod";
-import { sendEmail, verificationEmail } from "@workspace/email";
+import { db, usersTable, emailVerificationTokensTable, passwordResetTokensTable, sessionsTable } from "@workspace/db";
+import { RegisterUserBody, LoginUserBody, VerifyEmailBody, RequestPasswordResetBody, ResetPasswordBody } from "@workspace/api-zod";
+import { sendEmail, verificationEmail, passwordResetEmail } from "@workspace/email";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 import { generateToken, hashToken } from "../lib/tokens";
 import { createSession, setSessionCookie, clearSessionCookie, destroySessionByToken, requireAuth, SESSION_COOKIE } from "../lib/session";
@@ -15,6 +15,7 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -142,6 +143,61 @@ router.post("/auth/resend-verification", requireAuth, async (req, res) => {
   }
   await issueVerificationEmail(user.id, user.name, user.email);
   res.status(204).send();
+});
+
+router.post("/auth/request-password-reset", authRateLimit, validateBody(RequestPasswordResetBody), async (req, res) => {
+  const { email } = req.body as { email: string };
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
+
+  // Always respond 204 whether or not the account exists, so this endpoint
+  // can't be used to check which emails are registered.
+  if (user) {
+    await db.delete(passwordResetTokensTable).where(eq(passwordResetTokensTable.userId, user.id));
+
+    const token = generateToken();
+    await db.insert(passwordResetTokensTable).values({
+      userId: user.id,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
+    });
+
+    const resetUrl = `${config.appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    try {
+      await sendEmail(passwordResetEmail({ to: user.email, name: user.name, resetUrl }));
+    } catch (error) {
+      logger.error({ error }, "Failed to send password reset email");
+    }
+  }
+
+  res.status(204).send();
+});
+
+router.post("/auth/reset-password", authRateLimit, validateBody(ResetPasswordBody), async (req, res) => {
+  const { token, password } = req.body as { token: string; password: string };
+
+  const [record] = await db
+    .select()
+    .from(passwordResetTokensTable)
+    .where(eq(passwordResetTokensTable.tokenHash, hashToken(token)))
+    .limit(1);
+
+  if (!record || record.expiresAt.getTime() < Date.now()) {
+    res.status(400).json({ message: "This reset link is invalid or has expired. Request a new one." });
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+  const [user] = await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, record.userId)).returning();
+
+  await db.delete(passwordResetTokensTable).where(eq(passwordResetTokensTable.userId, record.userId));
+  // A password reset invalidates every existing session as a security measure.
+  await db.delete(sessionsTable).where(eq(sessionsTable.userId, record.userId));
+
+  const sessionToken = await createSession(user.id);
+  setSessionCookie(res, sessionToken);
+  res.status(200).json(serializeUser(user));
 });
 
 export default router;

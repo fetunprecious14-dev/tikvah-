@@ -104,6 +104,39 @@ export const ResendVerificationEmailResponse = zod.void()
 
 
 /**
+ * @summary Request a password reset email
+ */
+export const RequestPasswordResetBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const RequestPasswordResetResponse = zod.void()
+
+
+/**
+ * @summary Set a new password using a reset token
+ */
+export const resetPasswordBodyPasswordMin = 10;
+export const resetPasswordBodyPasswordMax = 200;
+
+
+
+export const ResetPasswordBody = zod.object({
+  "token": zod.string(),
+  "password": zod.string().min(resetPasswordBodyPasswordMin).max(resetPasswordBodyPasswordMax)
+})
+
+export const ResetPasswordResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "role": zod.enum(['user', 'admin']),
+  "emailVerified": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List the signed-in user's conversations, most recent first
  */
 export const ListConversationsQueryParams = zod.object({
@@ -381,6 +414,102 @@ export const AdminCreateConversationMessageResponse = zod.object({
   "riskCategories": zod.array(zod.string()).nullish(),
   "createdAt": zod.coerce.date()
 })
+
+
+/**
+ * @summary List resources for management (admin)
+ */
+export const AdminListResourcesQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']).optional(),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']).optional()
+})
+
+export const AdminListResourcesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']),
+  "url": zod.string().nullable(),
+  "body": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListResourcesResponse = zod.array(AdminListResourcesResponseItem)
+
+
+/**
+ * @summary Add a resource to the library (admin)
+ */
+export const adminCreateResourceBodyTitleMax = 200;
+
+export const adminCreateResourceBodyDescriptionMax = 500;
+
+
+
+export const AdminCreateResourceBody = zod.object({
+  "title": zod.string().min(1).max(adminCreateResourceBodyTitleMax),
+  "description": zod.string().min(1).max(adminCreateResourceBodyDescriptionMax),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']),
+  "url": zod.string().nullish(),
+  "body": zod.string().nullish()
+})
+
+export const AdminCreateResourceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']),
+  "url": zod.string().nullable(),
+  "body": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit a resource (admin)
+ */
+export const AdminUpdateResourceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const adminUpdateResourceBodyTitleMax = 200;
+
+export const adminUpdateResourceBodyDescriptionMax = 500;
+
+
+
+export const AdminUpdateResourceBody = zod.object({
+  "title": zod.string().min(1).max(adminUpdateResourceBodyTitleMax).optional(),
+  "description": zod.string().min(1).max(adminUpdateResourceBodyDescriptionMax).optional(),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']).optional(),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']).optional(),
+  "url": zod.string().nullish(),
+  "body": zod.string().nullish()
+})
+
+export const AdminUpdateResourceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "type": zod.enum(['article', 'book', 'video', 'podcast', 'verse', 'exercise', 'prompt', 'tip']),
+  "topic": zod.enum(['anxiety', 'grief', 'purpose', 'relationships', 'depression', 'stress', 'faith', 'healing', 'self-worth']),
+  "url": zod.string().nullable(),
+  "body": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove a resource from the library (admin)
+ */
+export const AdminDeleteResourceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteResourceResponse = zod.void()
 
 
 /**

@@ -9,6 +9,7 @@ import {
   type Message,
 } from "@workspace/db";
 import { sendEmail, replyNotificationEmail, urgentAlertEmail } from "@workspace/email";
+import { sendSms } from "@workspace/sms";
 import { assessSafety } from "./safety";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -88,24 +89,35 @@ async function notifyUserOfReply(conversation: Conversation): Promise<void> {
 }
 
 async function alertAdminOfUrgentMessage(conversation: Conversation, categories: string[]): Promise<void> {
-  if (!config.adminAlertEmail) {
-    logger.warn({ conversationId: conversation.id, categories }, "Urgent message flagged, but ADMIN_ALERT_EMAIL is not set — no alert email sent");
+  if (!config.adminAlertEmail && !config.adminAlertPhone) {
+    logger.warn(
+      { conversationId: conversation.id, categories },
+      "Urgent message flagged, but neither ADMIN_ALERT_EMAIL nor ADMIN_ALERT_PHONE is set — no alert sent",
+    );
     return;
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, conversation.userId)).limit(1);
+  const userName = user?.name ?? "A Tikvah user";
+  const conversationUrl = `${config.appUrl}/admin/conversations/${conversation.id}`;
 
-  try {
-    await sendEmail(
-      urgentAlertEmail({
-        to: config.adminAlertEmail,
-        userName: user?.name ?? "A Tikvah user",
-        categories,
-        conversationUrl: `${config.appUrl}/admin/conversations/${conversation.id}`,
-      }),
-    );
-  } catch (error) {
-    logger.error({ error, conversationId: conversation.id }, "Failed to send urgent alert email");
+  if (config.adminAlertEmail) {
+    try {
+      await sendEmail(urgentAlertEmail({ to: config.adminAlertEmail, userName, categories, conversationUrl }));
+    } catch (error) {
+      logger.error({ error, conversationId: conversation.id }, "Failed to send urgent alert email");
+    }
+  }
+
+  if (config.adminAlertPhone) {
+    try {
+      await sendSms({
+        to: config.adminAlertPhone,
+        body: `Tikvah: urgent submission from ${userName} (${categories.join(', ')}). Review: ${conversationUrl}`,
+      });
+    } catch (error) {
+      logger.error({ error, conversationId: conversation.id }, "Failed to send urgent alert SMS");
+    }
   }
 }
 

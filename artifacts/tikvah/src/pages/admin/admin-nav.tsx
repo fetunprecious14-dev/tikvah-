@@ -2,10 +2,11 @@ import { Link } from 'wouter';
 
 const items = [
   { href: '/admin', key: 'inbox', label: 'Inbox' },
+  { href: '/admin/resources', key: 'resources', label: 'Resources' },
   { href: '/admin/analytics', key: 'analytics', label: 'Analytics' },
-];
+] as const;
 
-export function AdminNav({ active }: { active: 'inbox' | 'analytics' }) {
+export function AdminNav({ active }: { active: 'inbox' | 'analytics' | 'resources' }) {
   return (
     <nav className="flex gap-2" aria-label="Admin navigation">
       {items.map(item => (

@@ -5,12 +5,20 @@ import {
   conversationsTable,
   messagesTable,
   usersTable,
+  resourcesTable,
   resourceEventsTable,
   type Conversation,
   type Message,
   type User,
 } from "@workspace/db";
-import { AdminListConversationsQueryParams, AdminUpdateConversationBody, CreateConversationMessageBody } from "@workspace/api-zod";
+import {
+  AdminListConversationsQueryParams,
+  AdminUpdateConversationBody,
+  CreateConversationMessageBody,
+  AdminListResourcesQueryParams,
+  AdminCreateResourceBody,
+  AdminUpdateResourceBody,
+} from "@workspace/api-zod";
 import { requireAuth, requireAdmin } from "../lib/session";
 import { validateBody, parseQuery } from "../lib/validate";
 import { appendMessage, loadMessages, conversationPreview } from "../lib/conversations";
@@ -120,6 +128,77 @@ router.post("/admin/conversations/:id/messages", validateBody(CreateConversation
 
   const message = await appendMessage({ conversation, senderType: "admin", senderId: req.user!.id, body });
   res.status(201).json(serializeMessage(message, TIKVAH_TEAM_LABEL));
+});
+
+router.get("/admin/resources", async (req, res) => {
+  const { search, topic, type } = parseQuery(AdminListResourcesQueryParams, req.query);
+
+  const conditions = [
+    topic ? eq(resourcesTable.topic, topic) : undefined,
+    type ? eq(resourcesTable.type, type) : undefined,
+    search ? or(ilike(resourcesTable.title, `%${search}%`), ilike(resourcesTable.description, `%${search}%`)) : undefined,
+  ].filter((condition): condition is NonNullable<typeof condition> => condition != null);
+
+  const resources = await db
+    .select()
+    .from(resourcesTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(resourcesTable.createdAt));
+
+  res.status(200).json(resources);
+});
+
+router.post("/admin/resources", validateBody(AdminCreateResourceBody), async (req, res) => {
+  const { title, description, type, topic, url, body } = req.body as {
+    title: string;
+    description: string;
+    type: (typeof resourcesTable.$inferInsert)["type"];
+    topic: (typeof resourcesTable.$inferInsert)["topic"];
+    url?: string | null;
+    body?: string | null;
+  };
+
+  const [resource] = await db
+    .insert(resourcesTable)
+    .values({ title, description, type, topic, url: url ?? null, body: body ?? null })
+    .returning();
+
+  res.status(201).json(resource);
+});
+
+router.patch("/admin/resources/:id", validateBody(AdminUpdateResourceBody), async (req, res) => {
+  const updates = req.body as Partial<{
+    title: string;
+    description: string;
+    type: (typeof resourcesTable.$inferInsert)["type"];
+    topic: (typeof resourcesTable.$inferInsert)["topic"];
+    url: string | null;
+    body: string | null;
+  }>;
+
+  const [resource] = await db
+    .update(resourcesTable)
+    .set(updates)
+    .where(eq(resourcesTable.id, String(req.params.id)))
+    .returning();
+
+  if (!resource) {
+    res.status(404).json({ message: "Resource not found." });
+    return;
+  }
+
+  res.status(200).json(resource);
+});
+
+router.delete("/admin/resources/:id", async (req, res) => {
+  const [resource] = await db.delete(resourcesTable).where(eq(resourcesTable.id, String(req.params.id))).returning();
+
+  if (!resource) {
+    res.status(404).json({ message: "Resource not found." });
+    return;
+  }
+
+  res.status(204).send();
 });
 
 router.get("/admin/analytics", async (req, res) => {

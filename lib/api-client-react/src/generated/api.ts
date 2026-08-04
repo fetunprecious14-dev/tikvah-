@@ -23,12 +23,14 @@ import type {
   AdminConversation,
   AdminConversationDetail,
   AdminListConversationsParams,
+  AdminListResourcesParams,
   Analytics,
   BadRequestResponse,
   Conversation,
   ConversationDetail,
   CreateConversationRequest,
   CreateMessageRequest,
+  CreateResourceRequest,
   Error,
   ForbiddenResponse,
   HealthStatus,
@@ -40,8 +42,11 @@ import type {
   Notification,
   PatchConversationRequest,
   RegisterRequest,
+  RequestPasswordResetRequest,
+  ResetPasswordRequest,
   Resource,
   UnauthorizedResponse,
+  UpdateResourceRequest,
   User,
   VerifyEmailRequest
 } from './api.schemas';
@@ -581,6 +586,148 @@ export const useResendVerificationEmail = <TError = ErrorType<UnauthorizedRespon
         TContext
       > => {
       return useMutation(getResendVerificationEmailMutationOptions(options));
+    }
+
+export const getRequestPasswordResetUrl = () => {
+
+
+
+
+  return `/api/auth/request-password-reset`
+}
+
+/**
+ * @summary Request a password reset email
+ */
+export const requestPasswordReset = async (requestPasswordResetRequest: RequestPasswordResetRequest, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRequestPasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(requestPasswordResetRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestPasswordResetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPasswordReset>>, TError,{data: BodyType<RequestPasswordResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestPasswordReset>>, TError,{data: BodyType<RequestPasswordResetRequest>}, TContext> => {
+
+const mutationKey = ['requestPasswordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestPasswordReset>>, {data: BodyType<RequestPasswordResetRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestPasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof requestPasswordReset>>>
+    export type RequestPasswordResetMutationBody = BodyType<RequestPasswordResetRequest>
+    export type RequestPasswordResetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a password reset email
+ */
+export const useRequestPasswordReset = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPasswordReset>>, TError,{data: BodyType<RequestPasswordResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestPasswordReset>>,
+        TError,
+        {data: BodyType<RequestPasswordResetRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestPasswordResetMutationOptions(options));
+    }
+
+export const getResetPasswordUrl = () => {
+
+
+
+
+  return `/api/auth/reset-password`
+}
+
+/**
+ * @summary Set a new password using a reset token
+ */
+export const resetPassword = async (resetPasswordRequest: ResetPasswordRequest, options?: RequestInit): Promise<User> => {
+
+  return customFetch<User>(getResetPasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resetPasswordRequest)
+  }
+);}
+
+
+
+
+
+export const getResetPasswordMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: BodyType<ResetPasswordRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: BodyType<ResetPasswordRequest>}, TContext> => {
+
+const mutationKey = ['resetPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPassword>>, {data: BodyType<ResetPasswordRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  resetPassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>
+    export type ResetPasswordMutationBody = BodyType<ResetPasswordRequest>
+    export type ResetPasswordMutationError = ErrorType<Error>
+
+    /**
+ * @summary Set a new password using a reset token
+ */
+export const useResetPassword = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,{data: BodyType<ResetPasswordRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetPassword>>,
+        TError,
+        {data: BodyType<ResetPasswordRequest>},
+        TContext
+      > => {
+      return useMutation(getResetPasswordMutationOptions(options));
     }
 
 export const getListConversationsUrl = (params?: ListConversationsParams,) => {
@@ -1493,6 +1640,304 @@ export const useAdminCreateConversationMessage = <TError = ErrorType<BadRequestR
         TContext
       > => {
       return useMutation(getAdminCreateConversationMessageMutationOptions(options));
+    }
+
+export const getAdminListResourcesUrl = (params?: AdminListResourcesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/resources?${stringifiedParams}` : `/api/admin/resources`
+}
+
+/**
+ * @summary List resources for management (admin)
+ */
+export const adminListResources = async (params?: AdminListResourcesParams, options?: RequestInit): Promise<Resource[]> => {
+
+  return customFetch<Resource[]>(getAdminListResourcesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListResourcesQueryKey = (params?: AdminListResourcesParams,) => {
+    return [
+    `/api/admin/resources`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListResourcesQueryOptions = <TData = Awaited<ReturnType<typeof adminListResources>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: AdminListResourcesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListResources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListResourcesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListResources>>> = ({ signal }) => adminListResources(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListResources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListResourcesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListResources>>>
+export type AdminListResourcesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List resources for management (admin)
+ */
+
+export function useAdminListResources<TData = Awaited<ReturnType<typeof adminListResources>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: AdminListResourcesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListResources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListResourcesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateResourceUrl = () => {
+
+
+
+
+  return `/api/admin/resources`
+}
+
+/**
+ * @summary Add a resource to the library (admin)
+ */
+export const adminCreateResource = async (createResourceRequest: CreateResourceRequest, options?: RequestInit): Promise<Resource> => {
+
+  return customFetch<Resource>(getAdminCreateResourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createResourceRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateResourceMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateResource>>, TError,{data: BodyType<CreateResourceRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateResource>>, TError,{data: BodyType<CreateResourceRequest>}, TContext> => {
+
+const mutationKey = ['adminCreateResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateResource>>, {data: BodyType<CreateResourceRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateResource(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateResource>>>
+    export type AdminCreateResourceMutationBody = BodyType<CreateResourceRequest>
+    export type AdminCreateResourceMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+    /**
+ * @summary Add a resource to the library (admin)
+ */
+export const useAdminCreateResource = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateResource>>, TError,{data: BodyType<CreateResourceRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateResource>>,
+        TError,
+        {data: BodyType<CreateResourceRequest>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateResourceMutationOptions(options));
+    }
+
+export const getAdminUpdateResourceUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/resources/${id}`
+}
+
+/**
+ * @summary Edit a resource (admin)
+ */
+export const adminUpdateResource = async (id: string,
+    updateResourceRequest: UpdateResourceRequest, options?: RequestInit): Promise<Resource> => {
+
+  return customFetch<Resource>(getAdminUpdateResourceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateResourceRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateResourceMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResource>>, TError,{id: string;data: BodyType<UpdateResourceRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResource>>, TError,{id: string;data: BodyType<UpdateResourceRequest>}, TContext> => {
+
+const mutationKey = ['adminUpdateResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateResource>>, {id: string;data: BodyType<UpdateResourceRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateResource(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateResource>>>
+    export type AdminUpdateResourceMutationBody = BodyType<UpdateResourceRequest>
+    export type AdminUpdateResourceMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Edit a resource (admin)
+ */
+export const useAdminUpdateResource = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateResource>>, TError,{id: string;data: BodyType<UpdateResourceRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateResource>>,
+        TError,
+        {id: string;data: BodyType<UpdateResourceRequest>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateResourceMutationOptions(options));
+    }
+
+export const getAdminDeleteResourceUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/resources/${id}`
+}
+
+/**
+ * @summary Remove a resource from the library (admin)
+ */
+export const adminDeleteResource = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteResourceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteResourceMutationOptions = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResource>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResource>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['adminDeleteResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteResource>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteResource(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteResourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteResource>>>
+
+    export type AdminDeleteResourceMutationError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Remove a resource from the library (admin)
+ */
+export const useAdminDeleteResource = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteResource>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteResource>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteResourceMutationOptions(options));
     }
 
 export const getAdminGetAnalyticsUrl = () => {

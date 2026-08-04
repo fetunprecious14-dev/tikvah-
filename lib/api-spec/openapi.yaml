@@ -147,6 +147,46 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /auth/request-password-reset:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestPasswordResetRequest"
+      responses:
+        "204":
+          description: If an account exists for that email, a reset email was sent (always 204, to avoid revealing whether an email is registered)
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password using a reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password updated, session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /conversations:
     get:
       operationId: listConversations
@@ -421,6 +461,112 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /admin/resources:
+    get:
+      operationId: adminListResources
+      tags: [admin]
+      summary: List resources for management (admin)
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: topic
+          in: query
+          schema:
+            $ref: "#/components/schemas/ResourceTopic"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/ResourceType"
+      responses:
+        "200":
+          description: Resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: adminCreateResource
+      tags: [admin]
+      summary: Add a resource to the library (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceRequest"
+      responses:
+        "201":
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/resources/{id}:
+    patch:
+      operationId: adminUpdateResource
+      tags: [admin]
+      summary: Edit a resource (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResourceRequest"
+      responses:
+        "200":
+          description: Updated resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: adminDeleteResource
+      tags: [admin]
+      summary: Remove a resource from the library (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Resource deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /admin/analytics:
     get:
       operationId: adminGetAnalytics
@@ -581,6 +727,25 @@ components:
         token:
           type: string
       required: [token]
+
+    RequestPasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 10
+          maxLength: 200
+      required: [token, password]
 
     Message:
       type: object
@@ -748,6 +913,51 @@ components:
           type: string
           format: date-time
       required: [id, title, description, type, topic, url, body, createdAt]
+
+    CreateResourceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+        type:
+          $ref: "#/components/schemas/ResourceType"
+        topic:
+          $ref: "#/components/schemas/ResourceTopic"
+        url:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+      required: [title, description, type, topic]
+
+    UpdateResourceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+        type:
+          $ref: "#/components/schemas/ResourceType"
+        topic:
+          $ref: "#/components/schemas/ResourceTopic"
+        url:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
 
     Analytics:
       type: object

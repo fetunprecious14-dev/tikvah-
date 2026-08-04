@@ -45,6 +45,21 @@ export function replyNotificationEmail(params: { to: string; name: string; conve
   };
 }
 
+export function passwordResetEmail(params: { to: string; name: string; resetUrl: string }): SendEmailInput {
+  return {
+    to: params.to,
+    subject: 'Reset your Tikvah password',
+    text: `Hi ${params.name},\n\nWe received a request to reset your Tikvah password. This link is valid for one hour:\n${params.resetUrl}\n\nIf you didn't ask for this, you can safely ignore this email — your password won't change.\n\n— The Tikvah team`,
+    html: wrap(
+      'Reset your Tikvah password. This link is valid for one hour.',
+      `<h1 style="font-size:24px;font-weight:600;margin:0 0 16px;">Reset your password.</h1>
+       <p style="font-size:15px;line-height:1.6;margin:0 0 24px;">We received a request to reset your Tikvah password. This link is valid for one hour.</p>
+       <a href="${params.resetUrl}" style="display:inline-block;background:#3b5b46;color:#f4efe4;text-decoration:none;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;">Choose a new password</a>
+       <p style="font-size:13px;line-height:1.6;color:#7a8a7e;margin-top:24px;">If you didn't ask for this, you can safely ignore this email — your password won't change.</p>`,
+    ),
+  };
+}
+
 export function urgentAlertEmail(params: { to: string; userName: string; categories: string[]; conversationUrl: string }): SendEmailInput {
   return {
     to: params.to,

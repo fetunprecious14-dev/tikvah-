@@ -17,6 +17,9 @@
     },
     {
       "path": "../../lib/integrations/email"
+    },
+    {
+      "path": "../../lib/integrations/sms"
     }
   ]
 }

@@ -109,6 +109,19 @@ export interface VerifyEmailRequest {
   token: string;
 }
 
+export interface RequestPasswordResetRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  password: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -188,6 +201,40 @@ export interface Resource {
   createdAt: string;
 }
 
+export interface CreateResourceRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  description: string;
+  type: ResourceType;
+  topic: ResourceTopic;
+  url?: string | null;
+  body?: string | null;
+}
+
+export interface UpdateResourceRequest {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  description?: string;
+  type?: ResourceType;
+  topic?: ResourceTopic;
+  url?: string | null;
+  body?: string | null;
+}
+
 export interface Analytics {
   totalUsers: number;
   activeUsers30d: number;
@@ -237,5 +284,11 @@ export type AdminListConversationsParams = {
 search?: SearchParameter;
 status?: ConversationStatus;
 tag?: string;
+};
+
+export type AdminListResourcesParams = {
+search?: SearchParameter;
+topic?: ResourceTopic;
+type?: ResourceType;
 };
 
