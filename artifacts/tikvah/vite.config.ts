@@ -72,6 +72,17 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // In dev, the API server runs on its own port. Proxying /api keeps the
+    // browser on a single origin so session cookies work without any
+    // cross-origin cookie configuration. Set API_PORT to enable it.
+    proxy: process.env.API_PORT
+      ? {
+          '/api': {
+            target: `http://localhost:${process.env.API_PORT}`,
+            changeOrigin: true,
+          },
+        }
+      : undefined,
   },
   preview: {
     port,

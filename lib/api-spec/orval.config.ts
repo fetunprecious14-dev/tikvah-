@@ -57,6 +57,11 @@ export default defineConfig({
       prettier: true,
       override: {
         zod: {
+          // The workspace pins zod's default export to v3 (see pnpm-workspace.yaml
+          // catalog) — the v4 API only exists at the `zod/v4` subpath, which orval's
+          // zod client doesn't target. Force v3 syntax so generated code matches the
+          // resolved runtime package.
+          version: 3,
           coerce: {
             query: ['boolean', 'number', 'string'],
             param: ['boolean', 'number', 'string'],
