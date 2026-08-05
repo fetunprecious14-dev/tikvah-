@@ -80,6 +80,25 @@ Required env (see `.env.example`):
 - **The rate limiter's Redis and in-memory stores use different windowing algorithms** — in-memory is a true sliding window, Redis is a fixed window (`INCR` + `PEXPIRE` on first hit). Both enforce the same `max` per `windowMs`, but the fixed window can allow a short burst right at a window boundary. Acceptable for abuse-blunting; don't rely on it for anything stricter.
 - **The Redis rate-limit store fails open**, not closed — if Redis is unreachable, requests are allowed through rather than blocked (logged as an error). This favors availability over strict enforcement; revisit if that's the wrong default for a given deployment.
 
+## Deploying to Vercel
+
+Two separate Vercel Projects, both pointed at this repo:
+
+1. **Backend** (`artifacts/api-server`)
+   - Project Settings → General → Root Directory: `artifacts/api-server`, and turn on **"Include source files outside of the Root Directory in the Build Step"** — required so pnpm can resolve the `@workspace/*` workspace packages and the shared `tsconfig.base.json`.
+   - `artifacts/api-server/vercel.json` pins Install/Build Commands (`pnpm install` / `pnpm run build`); nothing else to configure there.
+   - Environment variables (Project Settings → Environment Variables): `DATABASE_URL`, `COOKIE_SECRET`, `APP_URL` (set this to the **frontend's** URL once you know it), `ADMIN_ALERT_EMAIL`/`ADMIN_ALERT_PHONE`, `RESEND_API_KEY`/`EMAIL_FROM`, `TWILIO_*`, `REDIS_URL` — whichever apply (see the full list above).
+   - The Express app is served as a single serverless Function via `artifacts/api-server/api/[...slug].js`, a catch-all that imports the app **already bundled to plain JS** by `pnpm run build` (`dist/app.mjs`). This is deliberate: letting Vercel's own TypeScript pass compile `src/app.ts` directly (which is what happens by default if you don't do this) fails with `TS2349 This expression is not callable` on `pino-http`'s import — Vercel's Function compiler doesn't reliably honor this workspace's `tsconfig` `extends` chain / esModuleInterop-equivalent settings. Bundling ourselves sidesteps that entirely. If you ever see that error again, it means something is importing raw `.ts` from `/api` instead of the bundled `.mjs` — fix the import, don't add `esModuleInterop` and hope.
+   - Note the deployed URL (e.g. `https://your-backend.vercel.app`) once it's live — the frontend needs it next.
+
+2. **Frontend** (`artifacts/tikvah`)
+   - Root Directory: `artifacts/tikvah`, same "include outside root directory" toggle on. Framework Preset: Vite.
+   - Environment variables: `PORT` (any value, e.g. `3000` — `vite build` reads it at config-load time and throws if unset, even though it's otherwise unused for a production build) and `BASE_PATH=/`.
+   - `artifacts/tikvah/vercel.json` sets `outputDirectory: dist/public` (Vite's default `dist` isn't where this project's `vite.config.ts` puts the build) and two rewrites: `/api/:path*` proxies to the backend project's URL, and a SPA fallback (`/(.*) → /index.html`) so client-side routes like `/dashboard` work on a hard refresh. **Edit the placeholder backend URL in that rewrite** to the real one from step 1 before deploying.
+   - Because the rewrite proxies `/api/*` server-to-server, the browser only ever talks to the frontend's own origin — same-origin from the browser's point of view, so session cookies work with no CORS or cross-site-cookie configuration, the same way the local dev Vite proxy (`API_PORT`) works.
+
+**Not yet addressed for serverless specifically:** `lib/db` creates one `pg.Pool` at module load (`export const pool = new Pool(...)`). On Vercel, each cold start can spin up a fresh pool, and under real concurrent traffic this can exhaust your Postgres's `max_connections` — a well-known serverless+Postgres pitfall, not something that will surface in a quick smoke test. If you're on Neon, Supabase, or similar, use their pooled/PgBouncer connection string for `DATABASE_URL` in the Vercel env vars rather than the direct one. Ask if you want this hardened further (e.g. capping `Pool`'s `max`, or switching to an HTTP-based driver).
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

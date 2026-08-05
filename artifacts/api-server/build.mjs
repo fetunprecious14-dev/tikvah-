@@ -15,7 +15,17 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      // A second entry point, alongside the standalone-server one above: the
+      // Express app itself (no .listen()), pre-bundled to plain ESM so Vercel
+      // can use it as a serverless Function handler (see api/[...slug].js)
+      // without running its own TypeScript pass over our source — that
+      // separate pass doesn't reliably honor this workspace's tsconfig
+      // (extends chain, esModuleInterop-equivalent settings), which surfaces
+      // as "not callable" errors on CJS default imports like pino-http/cors.
+      path.resolve(artifactDir, "src/app.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
