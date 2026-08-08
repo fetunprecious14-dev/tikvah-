@@ -93,7 +93,7 @@ Two separate Vercel Projects, both pointed at this repo:
 
 2. **Frontend** (`artifacts/tikvah`)
    - Root Directory: `artifacts/tikvah`, same "include outside root directory" toggle on. Framework Preset: Vite.
-   - Environment variables: `PORT` (any value, e.g. `3000` — `vite build` reads it at config-load time and throws if unset, even though it's otherwise unused for a production build) and `BASE_PATH=/`.
+   - No frontend environment variables are required for the build. It defaults to port `5173` and base path `/`; set `PORT` or `BASE_PATH` only when your host needs an override.
    - `artifacts/tikvah/vercel.json` sets `outputDirectory: dist/public` (Vite's default `dist` isn't where this project's `vite.config.ts` puts the build) and two rewrites: `/api/:path*` proxies to the backend project's URL, and a SPA fallback (`/(.*) → /index.html`) so client-side routes like `/dashboard` work on a hard refresh. **Edit the placeholder backend URL in that rewrite** to the real one from step 1 before deploying.
    - Because the rewrite proxies `/api/*` server-to-server, the browser only ever talks to the frontend's own origin — same-origin from the browser's point of view, so session cookies work with no CORS or cross-site-cookie configuration, the same way the local dev Vite proxy (`API_PORT`) works.
 
