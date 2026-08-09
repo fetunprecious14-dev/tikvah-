@@ -84,23 +84,19 @@ Optional env:
 
 ## Deploying to Vercel
 
-**One** Vercel Project serves the whole app — the static frontend and the API on
-a single domain. Create it pointed at this repo with:
+One Vercel Project serves the whole app from the repository root. Import the
+GitHub repository, leave **Root Directory** empty, add `DATABASE_URL` and
+`COOKIE_SECRET`, and deploy. Do not override the Build Command or Output
+Directory in the dashboard; the root `vercel.json` supplies both.
 
-- Project Settings → General → Root Directory: `artifacts/tikvah`
-- Framework Preset: Vite
-- **"Include source files outside of the Root Directory in the Build Step"** turned on — required so pnpm can resolve the `@workspace/*` workspace packages, the shared `tsconfig.base.json`, and `artifacts/api-server` itself.
-- Environment variables: `DATABASE_URL` and `COOKIE_SECRET` are the only required ones. Everything else is optional (`RESEND_API_KEY`/`EMAIL_FROM`, `ADMIN_ALERT_EMAIL`/`ADMIN_ALERT_PHONE`, `TWILIO_*`, `REDIS_URL`, `APP_URL`, `DATABASE_POOL_MAX`) — the app deploys and works without them, with email/SMS logged instead of sent and rate limiting kept in-process. See the env list above.
+The root configuration builds the bundled Express API and the Vite frontend.
+`api/[...slug].js` serves `/api/*`, while `artifacts/tikvah/dist/public` is the
+static website. Frontend and API share one origin, so no backend URL, proxy,
+CORS setup, outside-root toggle, or second Vercel Project is needed.
 
-How the single project fits together, all of it from `artifacts/tikvah/vercel.json`:
-
-- **Build Command** does three things in order: builds the API server (`pnpm --filter @workspace/api-server run build`), builds the frontend (`pnpm run build`), then copies the API bundle into `dist/server/` (`pnpm run package:api` → `package-api.mjs`).
-- **`outputDirectory: dist/public`** — what gets served statically. Vite's default `dist` isn't where this project's `vite.config.ts` puts the build, hence the explicit setting. Note `dist/server/` sits *outside* the published directory, so the API bundle is never downloadable as a static asset.
-- **`/api/*` is a single serverless Function**, `api/[...slug].js` — a catch-all that re-exports the Express app **already bundled to plain JS** (`dist/server/app.mjs`) and lets Express do its own routing. Bundling ourselves is deliberate: letting Vercel's own TypeScript pass compile `src/app.ts` fails with `TS2349 This expression is not callable` on `pino-http`'s import, because Vercel's Function compiler doesn't reliably honor this workspace's `tsconfig` `extends` chain / esModuleInterop-equivalent settings. If you ever see that error again, it means something is importing raw `.ts` from `/api` instead of the bundled `.mjs` — fix the import, don't add `esModuleInterop` and hope. `functions.includeFiles: "dist/server/**"` makes sure pino's worker files (loaded at runtime by path, not by a static import, so nothing traces them) ship with the Function.
-- **The SPA fallback rewrite excludes `/api/`** (`/((?!api/).*) → /index.html`) so client-side routes like `/dashboard` survive a hard refresh without the fallback swallowing API requests.
-- **No proxying, no CORS.** Frontend and API share one origin, so session cookies work with no cross-site-cookie configuration — the same property the local dev Vite proxy (`API_PORT`) gives you.
-
-`artifacts/api-server/vercel.json` and `artifacts/api-server/api/[...slug].js` are still there and still work if you ever want the API as its own separate Project (set Root Directory to `artifacts/api-server` and `APP_URL` to the frontend's URL); nothing in the single-project setup depends on them.
+Everything except `DATABASE_URL` and `COOKIE_SECRET` is optional. Without the
+email/SMS variables, messages are logged instead of sent; without `REDIS_URL`,
+rate limiting uses the in-process fallback.
 
 **Serverless-safe DB connections:** `lib/db` caps its `pg.Pool` at `max: 1` per instance whenever it detects it's running on Vercel or Lambda (`VERCEL=1` / `AWS_LAMBDA_FUNCTION_NAME`), vs. `max: 10` for a traditional long-running server — override either default with `DATABASE_POOL_MAX`. It also sets a short `idleTimeoutMillis`/`connectionTimeoutMillis` and a `pool.on('error', ...)` handler so a dropped idle connection logs instead of crashing the process. This blunts, but doesn't eliminate, the classic serverless+Postgres connection-exhaustion problem — under real concurrent traffic you can still stack up one connection per warm instance, so if your Postgres provider (Neon, Supabase, etc.) offers a pooled/PgBouncer connection string, use that for `DATABASE_URL`; the two mitigations compound.
 
