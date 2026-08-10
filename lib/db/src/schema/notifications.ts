@@ -15,6 +15,6 @@ export const notificationsTable = pgTable('notifications', {
   conversationId: uuid('conversation_id').references(() => conversationsTable.id, { onDelete: 'cascade' }),
   readAt: timestamp('read_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type Notification = typeof notificationsTable.$inferSelect;

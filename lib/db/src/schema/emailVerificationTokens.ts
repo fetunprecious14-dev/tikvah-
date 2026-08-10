@@ -9,6 +9,6 @@ export const emailVerificationTokensTable = pgTable('email_verification_tokens',
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type EmailVerificationToken = typeof emailVerificationTokensTable.$inferSelect;

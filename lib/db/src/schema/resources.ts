@@ -33,7 +33,7 @@ export const resourcesTable = pgTable('resources', {
   url: text('url'),
   body: text('body'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const resourceEventsTable = pgTable('resource_events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -42,6 +42,6 @@ export const resourceEventsTable = pgTable('resource_events', {
     .references(() => resourcesTable.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').references(() => usersTable.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type Resource = typeof resourcesTable.$inferSelect;

@@ -12,7 +12,7 @@ export const usersTable = pgTable('users', {
   role: userRoleEnum('role').notNull().default('user'),
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const insertUserSchema = createInsertSchema(usersTable, {
   name: schema => schema.min(1, 'Please share your name.').max(120),

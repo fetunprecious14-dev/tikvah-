@@ -14,7 +14,7 @@ Tikvah ("hope" in Hebrew) is a private emotional support platform: users write t
 - `pnpm --filter @workspace/scripts run seed-resources` — (re)seed the resource library with curated content
 
 Required env (see `.env.example`):
-- `DATABASE_URL` — Postgres connection string
+- `DATABASE_URL` — Postgres connection string. The database is the Supabase project `fetunprecious14-dev's Project` (ref `fybptbghwmochcptgnrl`, `eu-central-1`); grab the string from the dashboard's **Connect** button. Use the **shared pooler in transaction mode (port 6543)** on Vercel and the direct connection (or session pooler) locally — see "Deploying to Vercel" for why.
 - `PORT` — required by both the API server and the frontend dev server (not used on Vercel)
 - `COOKIE_SECRET` — signs the session cookie; falls back to an insecure dev value if unset (throws in production)
 
@@ -27,6 +27,8 @@ Optional env:
 - `REDIS_URL` (API server, optional) — backs the rate limiter with Redis so limits hold across multiple instances; falls back to a per-process in-memory store if unset (fine for a single instance)
 - `API_PORT` (frontend only, dev) — enables a Vite dev-server proxy so `/api` calls stay same-origin as the frontend, which is what makes session cookies work without cross-origin cookie config in dev
 - `CORS_ORIGIN` (API server, optional) — pins CORS to a specific origin in production; defaults to reflecting the request origin (paired with `credentials: true`, so this is fine as long as auth is cookie/session based)
+- `LOG_LEVEL` (API server, optional) — pino level (`trace`/`debug`/`info`/`warn`/`error`/`fatal`); defaults to `info`
+- `BASE_PATH` (frontend build, optional) — sub-path the app is served from; defaults to `/`, which is what Vercel needs. `mockup-sandbox` is the exception: it *requires* both `PORT` and `BASE_PATH` and throws at config load without them, so a bare `pnpm run build` at the root fails on that package. It isn't part of the Vercel build (`vercel.json` builds only `api-server` and `tikvah`), so this doesn't affect deploys — set both vars if you need to build it locally.
 
 ## Stack
 
@@ -44,7 +46,7 @@ Optional env:
 ## Where things live
 
 - `lib/api-spec/openapi.yaml` — source of truth for the API contract. Edit this, then run the codegen script.
-- `lib/db/src/schema/*.ts` — Drizzle schema, one file per table (users, sessions, emailVerificationTokens, passwordResetTokens, conversations, messages, notifications, resources + resourceEvents).
+- `lib/db/src/schema/*.ts` — Drizzle schema, one file per table (users, sessions, emailVerificationTokens, passwordResetTokens, conversations, messages, notifications, resources + resourceEvents). Every table is declared `.enableRLS()` — see "Deploying to Vercel" for why that matters on Supabase.
 - `artifacts/api-server/src/routes/*.ts` — Express routes: `auth` (incl. password reset), `conversations` (user-facing), `notifications`, `resources`, `admin` (all `/admin/*` routes including resource CRUD, admin-only).
 - `artifacts/api-server/src/lib/` — `passwords.ts` (scrypt hashing), `session.ts` (cookie sessions + `requireAuth`/`requireAdmin` middleware), `safety.ts` (server-authoritative crisis-language detector), `conversations.ts` (shared message-append/notify/alert logic, now emails *and* texts the urgent alert), `config.ts`, `rateLimit.ts` (pluggable Redis/in-memory store), `validate.ts`.
 - `artifacts/tikvah/src/pages/` — one file per route; `admin/` holds the admin-only pages (`resources.tsx` is the resource-library CRUD UI). `src/pages/auth/` holds forgot/reset-password alongside login/register/verify. `src/lib/auth.tsx` has `AuthProvider`/`RequireAuth`/`RequireAdmin`. `src/components/shell.tsx` has the shared header/footer/button/page-intro chrome.
@@ -97,6 +99,16 @@ CORS setup, outside-root toggle, or second Vercel Project is needed.
 Everything except `DATABASE_URL` and `COOKIE_SECRET` is optional. Without the
 email/SMS variables, messages are logged instead of sent; without `REDIS_URL`,
 rate limiting uses the in-process fallback.
+
+**The database is Supabase** (project ref `fybptbghwmochcptgnrl`, `eu-central-1`).
+Two things about it decide what `DATABASE_URL` has to be on Vercel:
+
+- **Vercel's runtime is IPv4-only; Supabase's direct connection (`db.<ref>.supabase.co:5432`) is IPv6-only** without the paid IPv4 add-on. The direct string works locally but *cannot* reach the database from a Vercel Function — the symptom is connection timeouts (often `ENETUNREACH`), not an auth error.
+- The **shared pooler (Supavisor) is IPv4 on every plan**, and its **transaction mode (port 6543)** is the mode meant for serverless functions opening many short-lived connections. That's the string to put in Vercel.
+
+So: `postgresql://postgres.fybptbghwmochcptgnrl:<password>@aws-<N>-eu-central-1.pooler.supabase.com:6543/postgres`. Copy it from the dashboard rather than assembling it by hand — the username is `postgres.<project-ref>` (not plain `postgres`, which is only correct for the direct connection) and the `aws-<N>-` prefix varies per project. Transaction mode doesn't support *named* prepared statements; that's fine here because `pg` doesn't use them by default, but it's the reason not to swap in a driver that does.
+
+**Row Level Security is on, deliberately with no policies.** Supabase exposes every `public` table over PostgREST to anyone holding the publishable/anon key, which is a client-side value — left open, that would hand out `users.password_hash`, `sessions.token_hash`, and every private conversation. This app never uses supabase-js or PostgREST; it connects straight to Postgres as the table owner, and owners bypass RLS, so RLS-with-no-policies blocks the REST API without affecting the app at all (`anon`/`authenticated` are also `REVOKE`d). The tables carry `.enableRLS()` in `lib/db/src/schema/*.ts` for a reason: without it, `drizzle-kit push` sees "RLS on in the DB, not in the schema" and generates `DISABLE ROW LEVEL SECURITY`, silently reopening everything. Keep it on any new table. Supabase's linter reports these as `rls_enabled_no_policy` at INFO level — that's the intended state here, not something to fix by adding policies.
 
 **Serverless-safe DB connections:** `lib/db` caps its `pg.Pool` at `max: 1` per instance whenever it detects it's running on Vercel or Lambda (`VERCEL=1` / `AWS_LAMBDA_FUNCTION_NAME`), vs. `max: 10` for a traditional long-running server — override either default with `DATABASE_POOL_MAX`. It also sets a short `idleTimeoutMillis`/`connectionTimeoutMillis` and a `pool.on('error', ...)` handler so a dropped idle connection logs instead of crashing the process. This blunts, but doesn't eliminate, the classic serverless+Postgres connection-exhaustion problem — under real concurrent traffic you can still stack up one connection per warm instance, so if your Postgres provider (Neon, Supabase, etc.) offers a pooled/PgBouncer connection string, use that for `DATABASE_URL`; the two mitigations compound.
 

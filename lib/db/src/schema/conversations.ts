@@ -21,6 +21,6 @@ export const conversationsTable = pgTable('conversations', {
     .default(sql`'{}'::text[]`),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type Conversation = typeof conversationsTable.$inferSelect;

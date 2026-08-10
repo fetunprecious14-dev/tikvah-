@@ -18,7 +18,7 @@ export const messagesTable = pgTable('messages', {
   body: text('body').notNull(),
   riskCategories: text('risk_categories').array(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const insertMessageSchema = createInsertSchema(messagesTable, {
   body: schema => schema.trim().min(1, 'Please write something before sending.').max(20000),

@@ -9,6 +9,6 @@ export const sessionsTable = pgTable('sessions', {
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type Session = typeof sessionsTable.$inferSelect;
