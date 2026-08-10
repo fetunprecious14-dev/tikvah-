@@ -96,6 +96,11 @@ The root configuration builds the bundled Express API and the Vite frontend.
 static website. Frontend and API share one origin, so no backend URL, proxy,
 CORS setup, outside-root toggle, or second Vercel Project is needed.
 
+Two settings in `vercel.json` are load-bearing and look redundant until they aren't. Both were found by reproducing the build locally with `npx vercel build` (which runs the real builder — worth doing before blaming env vars for a failed deploy):
+
+- **`"framework": null`.** Vercel sees Express in the workspace and can preset the Project's framework to Express, which makes it look for a Node server entrypoint (`app`/`index`/`server`.{js,cjs,mjs,ts,cts,mts}) *inside the output directory* and fail the build with "No entrypoint found in output directory" — even though the build itself succeeded. This app isn't a Node-server deployment; it's static files plus one Function. Pinning the framework here overrides the dashboard preset, so the deploy doesn't depend on a dashboard setting nobody can see from the repo.
+- **The explicit `/api/:path*` rewrite.** Left to infer routing from the filename, Vercel does not treat `[...slug]` as a catch-all — it generates `^/api/([^/]+)$` (one segment) followed by a blanket `^/api(/.*)?$ → 404`. Single-segment routes like `/api/healthz` work, so the deploy looks healthy, while every nested route (`/api/auth/login`, `/api/conversations/{id}/messages`) 404s. The explicit rewrite emits a multi-segment route and must stay **before** the SPA rewrite. It injects `?path=…`, which is safe because nothing in the API reads `path` as a query parameter.
+
 Everything except `DATABASE_URL` and `COOKIE_SECRET` is optional. Without the
 email/SMS variables, messages are logged instead of sent; without `REDIS_URL`,
 rate limiting uses the in-process fallback.

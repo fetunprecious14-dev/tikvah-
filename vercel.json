@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/tikvah run build",
   "outputDirectory": "artifacts/tikvah/dist/public",
@@ -9,6 +10,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/[...slug]"
+    },
     {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
