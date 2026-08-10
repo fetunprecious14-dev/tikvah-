@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "promote-admin": "tsx ./src/promoteAdmin.ts",
-    "seed-resources": "tsx ./src/seedResources.ts",
+    "promote-admin": "tsx --env-file=../.env ./src/promoteAdmin.ts",
+    "seed-resources": "tsx --env-file=../.env ./src/seedResources.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
