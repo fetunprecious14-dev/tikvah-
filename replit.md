@@ -16,6 +16,7 @@ Tikvah ("hope" in Hebrew) is a private emotional support platform: users write t
 Required env (see `.env.example`):
 - `DATABASE_URL` — Postgres connection string. The database is the Supabase project `fetunprecious14-dev's Project` (ref `fybptbghwmochcptgnrl`, `eu-central-1`); grab the string from the dashboard's **Connect** button. Use the **shared pooler in transaction mode (port 6543)** on Vercel and the direct connection (or session pooler) locally — see "Deploying to Vercel" for why.
 - `PORT` — required by both the API server and the frontend dev server (not used on Vercel)
+- `INITIAL_ADMIN_EMAIL` — optional. The matching user is promoted to admin only after they verify ownership of this email. Use this to bootstrap the first administrator without a terminal command.
 - `COOKIE_SECRET` — signs the session cookie; falls back to an insecure dev value if unset (throws in production)
 
 Optional env:

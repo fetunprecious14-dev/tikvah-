@@ -70,7 +70,7 @@ router.post("/auth/login", authRateLimit, validateBody(LoginUserBody), async (re
   const { email, password } = req.body as { email: string; password: string };
   const normalizedEmail = email.trim().toLowerCase();
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
   const invalidCredentialsMessage = "That email and password combination doesn't match our records.";
 
   if (!user) {
@@ -82,6 +82,12 @@ router.post("/auth/login", authRateLimit, validateBody(LoginUserBody), async (re
   if (!passwordOk) {
     res.status(401).json({ message: invalidCredentialsMessage });
     return;
+  }
+
+  // Covers an already-verified configured admin account that was created
+  // before INITIAL_ADMIN_EMAIL was added to the server environment.
+  if (user.emailVerifiedAt && user.email === config.initialAdminEmail && user.role !== "admin") {
+    [user] = await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, user.id)).returning();
   }
 
   const token = await createSession(user.id);
@@ -116,9 +122,17 @@ router.post("/auth/verify-email", validateBody(VerifyEmailBody), async (req, res
     return;
   }
 
+  const [verificationUser] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, record.userId)).limit(1);
+  const isInitialAdmin = verificationUser?.email.trim().toLowerCase() === config.initialAdminEmail;
+
   const [user] = await db
     .update(usersTable)
-    .set({ emailVerifiedAt: new Date() })
+    // The configured initial administrator only receives the role after they
+    // prove control of the configured email address via this verification link.
+    .set({
+      emailVerifiedAt: new Date(),
+      ...(isInitialAdmin ? { role: "admin" as const } : {}),
+    })
     .where(eq(usersTable.id, record.userId))
     .returning();
 
