@@ -1,14 +1,19 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+
+// The shared local .env lives at the repository root, while this Vite project
+// lives under artifacts/tikvah. Load it explicitly so API_PORT enables the dev
+// proxy without making the frontend inherit the API's PORT.
+const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', path.resolve(import.meta.dirname, '..', '..'), '');
 
 // Vercel does not set PORT for static Vite builds. Keep the deployment build
 // independent of host-specific environment variables while allowing local
 // development platforms to override the port as usual.
-const rawPort = process.env.PORT ?? '5173';
+const rawPort = process.env.PORT ?? localEnv.VITE_PORT ?? '5173';
 
 const port = Number(rawPort);
 
@@ -18,7 +23,8 @@ if (Number.isNaN(port) || port <= 0) {
 
 // The application is served from the domain root on Vercel. BASE_PATH remains
 // available for hosts that mount it beneath a subpath.
-const basePath = process.env.BASE_PATH ?? '/';
+const basePath = process.env.BASE_PATH ?? localEnv.BASE_PATH ?? '/';
+const apiPort = process.env.API_PORT ?? localEnv.API_PORT;
 
 export default defineConfig({
   base: basePath,
@@ -68,10 +74,10 @@ export default defineConfig({
     // In dev, the API server runs on its own port. Proxying /api keeps the
     // browser on a single origin so session cookies work without any
     // cross-origin cookie configuration. Set API_PORT to enable it.
-    proxy: process.env.API_PORT
+    proxy: apiPort
       ? {
           '/api': {
-            target: `http://localhost:${process.env.API_PORT}`,
+            target: `http://localhost:${apiPort}`,
             changeOrigin: true,
           },
         }

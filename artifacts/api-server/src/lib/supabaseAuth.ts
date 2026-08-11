@@ -32,6 +32,15 @@ function bearerToken(req: Request): string | null {
   return token || null;
 }
 
+/** True once this Supabase user has confirmed the email configured as `INITIAL_ADMIN_EMAIL`. */
+function matchesInitialAdmin(supabaseUser: SupabaseUser): boolean {
+  return (
+    config.initialAdminEmail != null &&
+    supabaseUser.email_confirmed_at != null &&
+    supabaseUser.email?.trim().toLowerCase() === config.initialAdminEmail
+  );
+}
+
 /**
  * Loads the app-owned profile for a Supabase Auth user, creating it on first
  * sight. This is the only place a `profiles` row is created — deliberately
@@ -48,12 +57,30 @@ function bearerToken(req: Request): string | null {
  */
 async function getOrCreateProfile(supabaseUser: SupabaseUser, fallbackName?: string): Promise<Profile> {
   const [existing] = await db.select().from(profilesTable).where(eq(profilesTable.id, supabaseUser.id)).limit(1);
-  if (existing) return existing;
+  if (existing) {
+    // Covers a profile created before INITIAL_ADMIN_EMAIL was set on the
+    // server, or before this account's email was confirmed.
+    if (existing.role !== "admin" && matchesInitialAdmin(supabaseUser)) {
+      const [promoted] = await db.update(profilesTable).set({ role: "admin" }).where(eq(profilesTable.id, existing.id)).returning();
+      return promoted;
+    }
+    return existing;
+  }
 
   const metadataName = supabaseUser.user_metadata?.name;
   const name = fallbackName?.trim() || (typeof metadataName === "string" ? metadataName.trim() : "") || "Tikvah user";
 
-  const [created] = await db.insert(profilesTable).values({ id: supabaseUser.id, name }).onConflictDoNothing().returning();
+  // Optional one-time bootstrap: the account matching INITIAL_ADMIN_EMAIL
+  // becomes an admin the moment its profile is first created — but only once
+  // Supabase Auth has confirmed the address, the same "prove ownership of the
+  // email first" invariant the original hand-rolled version enforced.
+  const role = matchesInitialAdmin(supabaseUser) ? ("admin" as const) : undefined;
+
+  const [created] = await db
+    .insert(profilesTable)
+    .values({ id: supabaseUser.id, name, ...(role ? { role } : {}) })
+    .onConflictDoNothing()
+    .returning();
   if (created) return created;
 
   // Lost a race with another concurrent request creating the same profile.

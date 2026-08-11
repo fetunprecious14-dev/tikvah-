@@ -20,6 +20,7 @@ Required env (see `.env.example`):
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`) — frontend build only, same values under the `VITE_` prefix Vite requires to expose them to browser code. All four of these are safe to commit/expose — see "Auth".
 
 Optional env:
+- `INITIAL_ADMIN_EMAIL` — bootstraps the first administrator without a terminal command. The account matching this email is promoted to admin the moment its Tikvah profile is created (or, for one already created before this was set, the next time that account authenticates) — gated on Supabase Auth having confirmed the address, so ownership of the email is still proven first. See `getOrCreateProfile` in `lib/supabaseAuth.ts`.
 - `APP_URL` — base URL used to build links inside *product* email (reply notifications, urgent alerts) — not signup/reset email, which Supabase Auth sends and builds its own links for (configured via its Redirect URLs allowlist, see "Auth"). Defaults to the Vercel deployment's own URL (`VERCEL_PROJECT_PRODUCTION_URL`, falling back to `VERCEL_URL` on previews) when running on Vercel, and to `http://localhost:5173` otherwise — so it only needs setting for a custom domain or a non-Vercel host.
 - `ADMIN_ALERT_EMAIL` — where urgent-flag alert emails are sent (alerts are logged, not sent, if unset)
 - `ADMIN_ALERT_PHONE` — where urgent-flag alert SMS texts are sent, E.164 format e.g. `+15551234567` (logged, not sent, if unset)

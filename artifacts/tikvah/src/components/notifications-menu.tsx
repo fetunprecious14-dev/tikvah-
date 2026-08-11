@@ -18,7 +18,10 @@ function timeAgo(date: Date): string {
 export function NotificationsMenu() {
   const [open, setOpen] = useState(false);
   const [, navigate] = useLocation();
-  const { data: notifications = [] } = useListNotifications();
+  const { data: notificationData } = useListNotifications();
+  // A failed or misrouted request must not crash the entire shell. The API
+  // contract is an array; retain an empty state until it returns one.
+  const notifications = Array.isArray(notificationData) ? notificationData : [];
   const markRead = useMarkNotificationRead();
 
   const unreadCount = notifications.filter(notification => !notification.read).length;

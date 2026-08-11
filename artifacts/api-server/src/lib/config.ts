@@ -49,6 +49,8 @@ export const config = {
   adminAlertEmail: process.env.ADMIN_ALERT_EMAIL ?? null,
   /** Where urgent-flag alert SMS texts are sent (E.164 format); skipped (logged) when unset. */
   adminAlertPhone: process.env.ADMIN_ALERT_PHONE ?? null,
+  /** One trusted account promoted after it verifies ownership of this email. */
+  initialAdminEmail: process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase() || null,
   /** Shared rate-limit store for multi-instance deployments; falls back to in-process memory when unset. */
   redisUrl: process.env.REDIS_URL ?? null,
 };
