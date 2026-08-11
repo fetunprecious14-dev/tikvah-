@@ -107,9 +107,11 @@ Supabase Auth owns signup, login, logout, email confirmation, password reset, an
 ## Deploying to Vercel
 
 One Vercel Project serves the whole app from the repository root. Import the
-GitHub repository, leave **Root Directory** empty, add `DATABASE_URL` and
-`COOKIE_SECRET`, and deploy. Do not override the Build Command or Output
-Directory in the dashboard; the root `vercel.json` supplies both.
+GitHub repository, leave **Root Directory** empty, add `DATABASE_URL`,
+`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, and
+`VITE_SUPABASE_PUBLISHABLE_KEY` (see "Auth"), and deploy. Do not override the
+Build Command or Output Directory in the dashboard; the root `vercel.json`
+supplies both.
 
 The root configuration builds the bundled Express API and the Vite frontend.
 `api/[...slug].js` serves `/api/*`, while `artifacts/tikvah/dist/public` is the
@@ -121,9 +123,9 @@ Two settings in `vercel.json` are load-bearing and look redundant until they are
 - **`"framework": null`.** Vercel sees Express in the workspace and can preset the Project's framework to Express, which makes it look for a Node server entrypoint (`app`/`index`/`server`.{js,cjs,mjs,ts,cts,mts}) *inside the output directory* and fail the build with "No entrypoint found in output directory" — even though the build itself succeeded. This app isn't a Node-server deployment; it's static files plus one Function. Pinning the framework here overrides the dashboard preset, so the deploy doesn't depend on a dashboard setting nobody can see from the repo.
 - **The explicit `/api/:path*` rewrite.** Left to infer routing from the filename, Vercel does not treat `[...slug]` as a catch-all — it generates `^/api/([^/]+)$` (one segment) followed by a blanket `^/api(/.*)?$ → 404`. Single-segment routes like `/api/healthz` work, so the deploy looks healthy, while every nested route (`/api/auth/login`, `/api/conversations/{id}/messages`) 404s. The explicit rewrite emits a multi-segment route and must stay **before** the SPA rewrite. It injects `?path=…`, which is safe because nothing in the API reads `path` as a query parameter.
 
-Everything except `DATABASE_URL` and `COOKIE_SECRET` is optional. Without the
-email/SMS variables, messages are logged instead of sent; without `REDIS_URL`,
-rate limiting uses the in-process fallback.
+Everything except `DATABASE_URL` and the four Supabase Auth variables above is
+optional. Without the email/SMS variables, messages are logged instead of
+sent; without `REDIS_URL`, rate limiting uses the in-process fallback.
 
 **The database is Supabase** (project ref `fybptbghwmochcptgnrl`, `eu-central-1`).
 Two things about it decide what `DATABASE_URL` has to be on Vercel:
@@ -133,7 +135,7 @@ Two things about it decide what `DATABASE_URL` has to be on Vercel:
 
 So: `postgresql://postgres.fybptbghwmochcptgnrl:<password>@aws-<N>-eu-central-1.pooler.supabase.com:6543/postgres`. Copy it from the dashboard rather than assembling it by hand — the username is `postgres.<project-ref>` (not plain `postgres`, which is only correct for the direct connection) and the `aws-<N>-` prefix varies per project. Transaction mode doesn't support *named* prepared statements; that's fine here because `pg` doesn't use them by default, but it's the reason not to swap in a driver that does.
 
-**Row Level Security is on, deliberately with no policies.** Supabase exposes every `public` table over PostgREST to anyone holding the publishable/anon key, which is a client-side value — left open, that would hand out `users.password_hash`, `sessions.token_hash`, and every private conversation. This app never uses supabase-js or PostgREST; it connects straight to Postgres as the table owner, and owners bypass RLS, so RLS-with-no-policies blocks the REST API without affecting the app at all (`anon`/`authenticated` are also `REVOKE`d). The tables carry `.enableRLS()` in `lib/db/src/schema/*.ts` for a reason: without it, `drizzle-kit push` sees "RLS on in the DB, not in the schema" and generates `DISABLE ROW LEVEL SECURITY`, silently reopening everything. Keep it on any new table. Supabase's linter reports these as `rls_enabled_no_policy` at INFO level — that's the intended state here, not something to fix by adding policies.
+**Row Level Security is on, deliberately with no policies.** Supabase exposes every `public` table over PostgREST to anyone holding the publishable/anon key, which is a client-side value — left open, that would hand out every private conversation and message in `conversations`/`messages`, plus whatever's in `profiles`. (The API server's own `supabase-js` client — see "Auth" — only ever calls `auth.getUser()`; it never touches the Data API either, so this doesn't affect it.) This app's Express server connects straight to Postgres as the table owner for everything *except* that one auth check, and owners bypass RLS, so RLS-with-no-policies blocks the REST API without affecting the app at all (`anon`/`authenticated` are also `REVOKE`d). The tables carry `.enableRLS()` in `lib/db/src/schema/*.ts` for a reason: without it, `drizzle-kit push` sees "RLS on in the DB, not in the schema" and generates `DISABLE ROW LEVEL SECURITY`, silently reopening everything. Keep it on any new table. Supabase's linter reports these as `rls_enabled_no_policy` at INFO level — that's the intended state here, not something to fix by adding policies.
 
 **Serverless-safe DB connections:** `lib/db` caps its `pg.Pool` at `max: 1` per instance whenever it detects it's running on Vercel or Lambda (`VERCEL=1` / `AWS_LAMBDA_FUNCTION_NAME`), vs. `max: 10` for a traditional long-running server — override either default with `DATABASE_POOL_MAX`. It also sets a short `idleTimeoutMillis`/`connectionTimeoutMillis` and a `pool.on('error', ...)` handler so a dropped idle connection logs instead of crashing the process. This blunts, but doesn't eliminate, the classic serverless+Postgres connection-exhaustion problem — under real concurrent traffic you can still stack up one connection per warm instance, so if your Postgres provider (Neon, Supabase, etc.) offers a pooled/PgBouncer connection string, use that for `DATABASE_URL`; the two mitigations compound.
 
