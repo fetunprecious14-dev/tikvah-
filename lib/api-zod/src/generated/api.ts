@@ -18,22 +18,18 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary Create an account
+ * Called once, right after Supabase `signUp`/`signInWithPassword` returns a session, so the profile (name, role) exists before the app relies on it. Idempotent — safe to call more than once; a later call updates `name`. Requests without a valid Supabase access token are rejected, so this can only run once a session exists (it may not exist immediately after signup if email confirmation is required — the profile is then created lazily, the first time an authenticated request succeeds).
+ * @summary Create or update the signed-in Supabase Auth user's Tikvah profile
  */
-export const registerUserBodyNameMax = 120;
-
-export const registerUserBodyPasswordMin = 10;
-export const registerUserBodyPasswordMax = 200;
+export const registerProfileBodyNameMax = 120;
 
 
 
-export const RegisterUserBody = zod.object({
-  "name": zod.string().min(1).max(registerUserBodyNameMax),
-  "email": zod.string().email(),
-  "password": zod.string().min(registerUserBodyPasswordMin).max(registerUserBodyPasswordMax)
+export const RegisterProfileBody = zod.object({
+  "name": zod.string().min(1).max(registerProfileBodyNameMax)
 })
 
-export const RegisterUserResponse = zod.object({
+export const RegisterProfileResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "email": zod.string().email(),
@@ -41,92 +37,12 @@ export const RegisterUserResponse = zod.object({
   "emailVerified": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
-
-
-/**
- * @summary Log in
- */
-export const LoginUserBody = zod.object({
-  "email": zod.string().email(),
-  "password": zod.string()
-})
-
-export const LoginUserResponse = zod.object({
-  "id": zod.string().uuid(),
-  "name": zod.string(),
-  "email": zod.string().email(),
-  "role": zod.enum(['user', 'admin']),
-  "emailVerified": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Log out
- */
-export const LogoutUserResponse = zod.void()
 
 
 /**
  * @summary Get the signed-in user
  */
 export const GetCurrentUserResponse = zod.object({
-  "id": zod.string().uuid(),
-  "name": zod.string(),
-  "email": zod.string().email(),
-  "role": zod.enum(['user', 'admin']),
-  "emailVerified": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Confirm an email address with a verification token
- */
-export const VerifyEmailBody = zod.object({
-  "token": zod.string()
-})
-
-export const VerifyEmailResponse = zod.object({
-  "id": zod.string().uuid(),
-  "name": zod.string(),
-  "email": zod.string().email(),
-  "role": zod.enum(['user', 'admin']),
-  "emailVerified": zod.boolean(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Send a fresh verification email
- */
-export const ResendVerificationEmailResponse = zod.void()
-
-
-/**
- * @summary Request a password reset email
- */
-export const RequestPasswordResetBody = zod.object({
-  "email": zod.string().email()
-})
-
-export const RequestPasswordResetResponse = zod.void()
-
-
-/**
- * @summary Set a new password using a reset token
- */
-export const resetPasswordBodyPasswordMin = 10;
-export const resetPasswordBodyPasswordMax = 200;
-
-
-
-export const ResetPasswordBody = zod.object({
-  "token": zod.string(),
-  "password": zod.string().min(resetPasswordBodyPasswordMin).max(resetPasswordBodyPasswordMax)
-})
-
-export const ResetPasswordResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "email": zod.string().email(),

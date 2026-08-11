@@ -86,40 +86,12 @@ export interface User {
   createdAt: string;
 }
 
-export interface RegisterRequest {
+export interface RegisterProfileRequest {
   /**
      * @minLength 1
      * @maxLength 120
      */
   name: string;
-  email: string;
-  /**
-     * @minLength 10
-     * @maxLength 200
-     */
-  password: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface VerifyEmailRequest {
-  token: string;
-}
-
-export interface RequestPasswordResetRequest {
-  email: string;
-}
-
-export interface ResetPasswordRequest {
-  token: string;
-  /**
-     * @minLength 10
-     * @maxLength 200
-     */
-  password: string;
 }
 
 export interface Message {

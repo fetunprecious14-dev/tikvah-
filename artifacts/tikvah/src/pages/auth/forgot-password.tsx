@@ -3,21 +3,25 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Check } from 'lucide-react';
 import { Link } from 'wouter';
-import { useRequestPasswordReset } from '@workspace/api-client-react';
-import { RequestPasswordResetBody, type RequestPasswordResetRequest } from '@workspace/api-zod';
 import { Shell, Button } from '@/components/shell';
+import { supabase } from '@/lib/supabaseClient';
+import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/lib/authValidation';
 
 export function ForgotPassword() {
   const [sent, setSent] = useState(false);
-  const requestReset = useRequestPasswordReset();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RequestPasswordResetRequest>({ resolver: zodResolver(RequestPasswordResetBody) });
+  } = useForm<ForgotPasswordFormValues>({ resolver: zodResolver(forgotPasswordSchema) });
 
-  const onSubmit = handleSubmit(data => {
-    requestReset.mutate({ data }, { onSuccess: () => setSent(true) });
+  const onSubmit = handleSubmit(async ({ email }) => {
+    // Supabase's own response here doesn't distinguish a registered email
+    // from an unregistered one, so — same as before — showing the "check
+    // your email" screen unconditionally on a non-error response can't be
+    // used to test which emails are registered.
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+    setSent(true);
   });
 
   return (
@@ -28,7 +32,7 @@ export function ForgotPassword() {
             <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground"><Check size={22} /></span>
             <h1 className="mt-6 font-serif text-4xl leading-tight tracking-[-.03em]">Check your email.</h1>
             <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              If an account exists for that email, we've sent a link to reset your password. It's valid for one hour.
+              If an account exists for that email, we've sent a link to reset your password.
             </p>
             <div className="mt-8"><Button href="/login" testId="button-forgot-back-to-login">Back to sign in</Button></div>
           </>

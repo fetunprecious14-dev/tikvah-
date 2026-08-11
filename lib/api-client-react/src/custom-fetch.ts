@@ -360,10 +360,10 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  // Web sessions are cookie-based (see setAuthTokenGetter's note above), so
-  // credentials must be sent even when the frontend and API are on different
-  // origins/ports in dev. Callers can still override this explicitly.
-  const credentials = init.credentials ?? "include";
+  // Auth is a bearer token (see setAuthTokenGetter above), not a cookie, so
+  // there's nothing that needs cross-origin credentials by default. Callers
+  // can still override this explicitly.
+  const credentials = init.credentials ?? "same-origin";
 
   const response = await fetch(input, { ...init, method, headers, credentials });
 

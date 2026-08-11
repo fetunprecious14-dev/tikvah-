@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LoginRequest {
-  email: string;
-  password: string;
+export interface RegisterProfileRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
 }

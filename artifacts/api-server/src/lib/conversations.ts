@@ -4,7 +4,8 @@ import {
   conversationsTable,
   messagesTable,
   notificationsTable,
-  usersTable,
+  profilesTable,
+  authUsersTable,
   type Conversation,
   type Message,
 } from "@workspace/db";
@@ -64,11 +65,18 @@ export async function appendMessage(params: {
 }
 
 async function notifyUserOfReply(conversation: Conversation): Promise<void> {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, conversation.userId)).limit(1);
-  if (!user) return;
+  // Profiles don't store email (Supabase Auth owns it) — join to auth.users
+  // for just the address to send this to.
+  const [user] = await db
+    .select({ name: profilesTable.name, email: authUsersTable.email })
+    .from(profilesTable)
+    .innerJoin(authUsersTable, eq(profilesTable.id, authUsersTable.id))
+    .where(eq(profilesTable.id, conversation.userId))
+    .limit(1);
+  if (!user?.email) return;
 
   await db.insert(notificationsTable).values({
-    userId: user.id,
+    userId: conversation.userId,
     type: "reply",
     title: "You have a reply",
     body: "A member of the Tikvah team has written back to you.",
@@ -97,7 +105,7 @@ async function alertAdminOfUrgentMessage(conversation: Conversation, categories:
     return;
   }
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, conversation.userId)).limit(1);
+  const [user] = await db.select({ name: profilesTable.name }).from(profilesTable).where(eq(profilesTable.id, conversation.userId)).limit(1);
   const userName = user?.name ?? "A Tikvah user";
   const conversationUrl = `${config.appUrl}/admin/conversations/${conversation.id}`;
 

@@ -1,5 +1,5 @@
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { usersTable } from './users';
+import { profilesTable } from './profiles';
 
 export const resourceTypeEnum = pgEnum('resource_type', [
   'article',
@@ -40,7 +40,7 @@ export const resourceEventsTable = pgTable('resource_events', {
   resourceId: uuid('resource_id')
     .notNull()
     .references(() => resourcesTable.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').references(() => usersTable.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').references(() => profilesTable.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 

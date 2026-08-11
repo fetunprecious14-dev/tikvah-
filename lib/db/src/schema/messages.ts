@@ -2,7 +2,7 @@ import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod/v4';
 import { conversationsTable } from './conversations';
-import { usersTable } from './users';
+import { profilesTable } from './profiles';
 
 export const senderTypeEnum = pgEnum('sender_type', ['user', 'admin']);
 
@@ -14,7 +14,7 @@ export const messagesTable = pgTable('messages', {
   senderType: senderTypeEnum('sender_type').notNull(),
   senderId: uuid('sender_id')
     .notNull()
-    .references(() => usersTable.id),
+    .references(() => profilesTable.id),
   body: text('body').notNull(),
   riskCategories: text('risk_categories').array(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

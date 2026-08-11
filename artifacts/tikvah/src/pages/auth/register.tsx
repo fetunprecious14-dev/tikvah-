@@ -1,42 +1,86 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { useRegisterUser, getGetCurrentUserQueryKey } from '@workspace/api-client-react';
-import { RegisterUserBody, type RegisterRequest } from '@workspace/api-zod';
+import { registerProfile, getGetCurrentUserQueryKey } from '@workspace/api-client-react';
 import { Shell, Button } from '@/components/shell';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabaseClient';
+import { registerSchema, type RegisterFormValues } from '@/lib/authValidation';
+
+// Read by verify-email.tsx's "resend confirmation" action — Supabase's
+// signUp doesn't return an email address anywhere the confirmation-pending
+// page could otherwise get it from, since there's no session yet.
+export const PENDING_VERIFICATION_EMAIL_KEY = 'tikvah:pending-verification-email';
 
 export function Register() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [serverError, setServerError] = useState('');
-  const registerUser = useRegisterUser();
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterRequest>({ resolver: zodResolver(RegisterUserBody) });
+  } = useForm<RegisterFormValues>({ resolver: zodResolver(registerSchema) });
 
   // Navigate once the auth context has actually observed the new user, rather
-  // than immediately inside the mutation callback — that would race the
-  // context update and could bounce the auth-gated /dashboard route back here.
+  // than immediately inside the submit handler — that would race the app
+  // profile fetch and could bounce the auth-gated /dashboard route back here.
   useEffect(() => {
     if (user) navigate('/dashboard');
   }, [user, navigate]);
 
-  const onSubmit = handleSubmit(data => {
+  const onSubmit = handleSubmit(async ({ name, email, password }) => {
     setServerError('');
-    registerUser.mutate(
-      { data },
-      {
-        onSuccess: user => queryClient.setQueryData(getGetCurrentUserQueryKey(), user),
-        onError: error => setServerError(error instanceof Error ? error.message : 'Something went wrong. Please try again.'),
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name }, // display-only metadata; the profile row is the source of truth for role/authorization
+        emailRedirectTo: `${window.location.origin}/verify-email`,
       },
-    );
+    });
+
+    if (error) {
+      setServerError(error.message);
+      return;
+    }
+
+    if (data.session) {
+      // No email confirmation required (or it's off for this project) —
+      // we already have a session, so create the profile now rather than
+      // waiting for it to self-heal on the next authenticated request.
+      try {
+        const profile = await registerProfile({ name });
+        queryClient.setQueryData(getGetCurrentUserQueryKey(), profile);
+      } catch (profileError) {
+        // Non-fatal: requireAuth on the API creates a profile lazily from
+        // signup metadata the first time an authenticated request succeeds.
+        setServerError(profileError instanceof Error ? profileError.message : 'Something went wrong finishing setup. Try signing in.');
+      }
+    } else {
+      sessionStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, email);
+      setPendingConfirmation(true);
+    }
   });
+
+  if (pendingConfirmation) {
+    return (
+      <Shell>
+        <section className="mx-auto max-w-[520px] px-5 py-24 text-center sm:px-8 sm:py-32">
+          <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground"><Check size={22} /></span>
+          <h1 className="mt-6 font-serif text-4xl leading-tight">Check your email.</h1>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+            We've sent a confirmation link to finish setting up your account. Once you confirm, you can sign in.
+          </p>
+          <div className="mt-8"><Button href="/login" testId="button-register-to-login">Go to sign in</Button></div>
+        </section>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

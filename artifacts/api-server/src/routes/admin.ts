@@ -4,12 +4,12 @@ import {
   db,
   conversationsTable,
   messagesTable,
-  usersTable,
+  profilesTable,
+  authUsersTable,
   resourcesTable,
   resourceEventsTable,
   type Conversation,
   type Message,
-  type User,
 } from "@workspace/db";
 import {
   AdminListConversationsQueryParams,
@@ -18,8 +18,9 @@ import {
   AdminListResourcesQueryParams,
   AdminCreateResourceBody,
   AdminUpdateResourceBody,
+  type ConversationUser,
 } from "@workspace/api-zod";
-import { requireAuth, requireAdmin } from "../lib/session";
+import { requireAuth, requireAdmin } from "../lib/supabaseAuth";
 import { validateBody, parseQuery } from "../lib/validate";
 import { appendMessage, loadMessages, conversationPreview } from "../lib/conversations";
 
@@ -41,7 +42,7 @@ function serializeMessage(message: Message, userName: string) {
   };
 }
 
-function serializeAdminConversation(conversation: Conversation, messages: Message[], user: User) {
+function serializeAdminConversation(conversation: Conversation, messages: Message[], user: ConversationUser) {
   return {
     id: conversation.id,
     status: conversation.status,
@@ -49,8 +50,18 @@ function serializeAdminConversation(conversation: Conversation, messages: Messag
     preview: conversationPreview(messages),
     lastMessageAt: conversation.lastMessageAt,
     createdAt: conversation.createdAt,
-    user: { id: user.id, name: user.name, email: user.email },
+    user,
   };
+}
+
+// Profiles don't store email (Supabase Auth owns it), so every admin query
+// that needs a user's identity joins profiles -> auth.users for just that
+// column. Centralized here so the join and the null-coalesce (the column is
+// nullable in Supabase's schema, though this app only ever does email auth)
+// aren't repeated at each call site.
+const conversationUserColumns = { id: profilesTable.id, name: profilesTable.name, email: authUsersTable.email };
+function toConversationUser(user: { id: string; name: string; email: string | null }): ConversationUser {
+  return { id: user.id, name: user.name, email: user.email ?? "" };
 }
 
 router.get("/admin/conversations", async (req, res) => {
@@ -59,13 +70,14 @@ router.get("/admin/conversations", async (req, res) => {
   const conditions = [
     status ? eq(conversationsTable.status, status) : undefined,
     tag ? arrayContains(conversationsTable.tags, [tag]) : undefined,
-    search ? or(ilike(usersTable.name, `%${search}%`), ilike(usersTable.email, `%${search}%`)) : undefined,
+    search ? or(ilike(profilesTable.name, `%${search}%`), ilike(authUsersTable.email, `%${search}%`)) : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => condition != null);
 
   const rows = await db
-    .select({ conversation: conversationsTable, user: usersTable })
+    .select({ conversation: conversationsTable, user: conversationUserColumns })
     .from(conversationsTable)
-    .innerJoin(usersTable, eq(conversationsTable.userId, usersTable.id))
+    .innerJoin(profilesTable, eq(conversationsTable.userId, profilesTable.id))
+    .innerJoin(authUsersTable, eq(profilesTable.id, authUsersTable.id))
     .where(conditions.length ? and(...conditions) : undefined)
     // Urgent conversations always surface first so nothing critical is missed
     // in the default view; within that, most recently active first.
@@ -75,14 +87,17 @@ router.get("/admin/conversations", async (req, res) => {
     rows.map(async ({ conversation, user }) => ({ conversation, user, messages: await loadMessages(conversation.id) })),
   );
 
-  res.status(200).json(withMessages.map(({ conversation, user, messages }) => serializeAdminConversation(conversation, messages, user)));
+  res
+    .status(200)
+    .json(withMessages.map(({ conversation, user, messages }) => serializeAdminConversation(conversation, messages, toConversationUser(user))));
 });
 
 router.get("/admin/conversations/:id", async (req, res) => {
   const [row] = await db
-    .select({ conversation: conversationsTable, user: usersTable })
+    .select({ conversation: conversationsTable, user: conversationUserColumns })
     .from(conversationsTable)
-    .innerJoin(usersTable, eq(conversationsTable.userId, usersTable.id))
+    .innerJoin(profilesTable, eq(conversationsTable.userId, profilesTable.id))
+    .innerJoin(authUsersTable, eq(profilesTable.id, authUsersTable.id))
     .where(eq(conversationsTable.id, String(req.params.id)))
     .limit(1);
 
@@ -93,7 +108,7 @@ router.get("/admin/conversations/:id", async (req, res) => {
 
   const messages = await loadMessages(row.conversation.id);
   res.status(200).json({
-    ...serializeAdminConversation(row.conversation, messages, row.user),
+    ...serializeAdminConversation(row.conversation, messages, toConversationUser(row.user)),
     messages: messages.map(message => serializeMessage(message, row.user.name)),
   });
 });
@@ -112,9 +127,14 @@ router.patch("/admin/conversations/:id", validateBody(AdminUpdateConversationBod
     return;
   }
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, updated.userId)).limit(1);
+  const [user] = await db
+    .select(conversationUserColumns)
+    .from(profilesTable)
+    .innerJoin(authUsersTable, eq(profilesTable.id, authUsersTable.id))
+    .where(eq(profilesTable.id, updated.userId))
+    .limit(1);
   const messages = await loadMessages(updated.id);
-  res.status(200).json(serializeAdminConversation(updated, messages, user!));
+  res.status(200).json(serializeAdminConversation(updated, messages, toConversationUser(user!)));
 });
 
 router.post("/admin/conversations/:id/messages", validateBody(CreateConversationMessageBody), async (req, res) => {
@@ -206,11 +226,16 @@ router.get("/admin/analytics", async (req, res) => {
   const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-  const [totalUsersRow] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable);
+  // "Users" here means profiles, which are created at first sign-in rather
+  // than at Supabase signup (see getOrCreateProfile in lib/supabaseAuth.ts) —
+  // close enough in practice (profile creation follows signup by one
+  // request), but worth knowing if this and Supabase's own auth.users count
+  // ever need to line up exactly.
+  const [totalUsersRow] = await db.select({ count: sql<number>`count(*)::int` }).from(profilesTable);
   const [newRegistrationsRow] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(usersTable)
-    .where(gte(usersTable.createdAt, sevenDaysAgo));
+    .from(profilesTable)
+    .where(gte(profilesTable.createdAt, sevenDaysAgo));
 
   const [activeUsersRow] = await db
     .select({ count: sql<number>`count(distinct ${messagesTable.senderId})::int` })

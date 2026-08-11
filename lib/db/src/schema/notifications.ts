@@ -1,6 +1,6 @@
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { conversationsTable } from './conversations';
-import { usersTable } from './users';
+import { profilesTable } from './profiles';
 
 export const notificationTypeEnum = pgEnum('notification_type', ['reply', 'resource', 'maintenance']);
 
@@ -8,7 +8,7 @@ export const notificationsTable = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => usersTable.id, { onDelete: 'cascade' }),
+    .references(() => profilesTable.id, { onDelete: 'cascade' }),
   type: notificationTypeEnum('type').notNull(),
   title: text('title').notNull(),
   body: text('body').notNull(),

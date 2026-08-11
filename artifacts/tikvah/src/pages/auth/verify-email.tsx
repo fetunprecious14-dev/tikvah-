@@ -1,40 +1,40 @@
-import { useEffect, useRef, useState } from 'react';
-import { useSearch } from 'wouter';
+import { useState } from 'react';
 import { Check, X } from 'lucide-react';
-import { useVerifyEmail, useResendVerificationEmail, getGetCurrentUserQueryKey } from '@workspace/api-client-react';
 import { Shell, Button } from '@/components/shell';
-import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabaseClient';
+import { readAuthRedirectError } from '@/lib/authRedirectError';
+import { PENDING_VERIFICATION_EMAIL_KEY } from './register';
 
 export function VerifyEmail() {
-  const search = useSearch();
-  const token = new URLSearchParams(search).get('token');
-  const { user } = useAuth();
-  const verifyEmail = useVerifyEmail();
-  const resend = useResendVerificationEmail();
-  const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'error'>(token ? 'pending' : 'idle');
-  const [resendDone, setResendDone] = useState(false);
-  const attempted = useRef(false);
+  // Confirming the emailed link establishes a session automatically (see
+  // detectSessionInUrl in lib/auth.tsx) — this page just watches for that
+  // rather than handling a token of its own.
+  const { user, isLoading } = useAuth();
+  const [linkError] = useState(readAuthRedirectError);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const pendingEmail = sessionStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY);
 
-  useEffect(() => {
-    if (!token || attempted.current) return;
-    attempted.current = true;
-    verifyEmail.mutate(
-      { data: { token } },
-      {
-        onSuccess: user => {
-          queryClient.setQueryData(getGetCurrentUserQueryKey(), user);
-          setStatus('success');
-        },
-        onError: () => setStatus('error'),
-      },
-    );
-  }, [token, verifyEmail]);
+  const handleResend = async () => {
+    if (!pendingEmail) return;
+    setResendState('sending');
+    const { error } = await supabase.auth.resend({ type: 'signup', email: pendingEmail });
+    setResendState(error ? 'error' : 'sent');
+  };
+
+  const status: 'pending' | 'success' | 'error' = isLoading ? 'pending' : linkError ? 'error' : user ? 'success' : 'pending';
 
   return (
     <Shell>
       <section className="mx-auto max-w-[520px] px-5 py-24 text-center sm:px-8 sm:py-32">
-        {status === 'pending' && <p className="text-sm text-muted-foreground">Confirming your email…</p>}
+        {status === 'pending' && !linkError && (
+          <>
+            <p className="text-sm text-muted-foreground">Confirming your email…</p>
+            <p className="mt-4 text-xs leading-6 text-muted-foreground">
+              If you landed here without clicking a link from your inbox, open the confirmation email we sent when you registered.
+            </p>
+          </>
+        )}
 
         {status === 'success' && (
           <>
@@ -50,28 +50,16 @@ export function VerifyEmail() {
             <span className="mx-auto grid size-14 place-items-center rounded-full bg-destructive text-destructive-foreground"><X size={22} /></span>
             <h1 className="mt-6 font-serif text-4xl leading-tight">This link isn't working.</h1>
             <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              It may have expired. {user ? 'Request a new one below.' : 'Sign in and request a new one from your dashboard.'}
+              {linkError ? linkError.replaceAll('+', ' ') : 'It may have expired.'}
             </p>
-            {user && (
+            {pendingEmail && (
               <div className="mt-8">
-                <Button
-                  onClick={() => resend.mutate(undefined, { onSuccess: () => setResendDone(true) })}
-                  disabled={resend.isPending || resendDone}
-                  testId="button-resend-verification"
-                >
-                  {resendDone ? 'New link sent — check your email' : 'Send a new verification link'}
+                <Button onClick={handleResend} disabled={resendState === 'sending' || resendState === 'sent'} testId="button-resend-verification">
+                  {resendState === 'sent' ? 'New link sent — check your email' : 'Send a new verification link'}
                 </Button>
+                {resendState === 'error' && <p className="mt-3 text-xs text-destructive">Something went wrong. Please try again.</p>}
               </div>
             )}
-          </>
-        )}
-
-        {status === 'idle' && (
-          <>
-            <h1 className="font-serif text-4xl leading-tight">Verify your email</h1>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              Open the verification link we sent you, or request a new one from your dashboard.
-            </p>
           </>
         )}
       </section>
