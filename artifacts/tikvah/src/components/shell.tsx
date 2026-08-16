@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowUpRight, Leaf, Menu, Moon, Sun, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabaseClient';
+import { useLogoutUser } from '@workspace/api-client-react';
+import { queryClient } from '@/lib/queryClient';
 import { NotificationsMenu } from './notifications-menu';
 
 export function Logo() {
@@ -57,14 +58,10 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, isLoading } = useAuth();
   const navItems = useNavItems();
+  const logout = useLogoutUser();
 
-  const handleLogout = async () => {
-    // Supabase defaults signOut() to `scope: 'global'` — every device signed
-    // out, not just this one. The original hand-rolled sessions were always
-    // per-device (a "sign out" button only ever killed the session it was
-    // clicked from), so `local` is the equivalent scope here. Clearing the
-    // query cache on sign-out happens centrally in AuthProvider, not here.
-    await supabase.auth.signOut({ scope: 'local' });
+  const handleLogout = () => {
+    logout.mutate(undefined, { onSuccess: () => queryClient.clear() });
     setMobileOpen(false);
   };
 

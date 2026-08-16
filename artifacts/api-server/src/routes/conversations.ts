@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db, conversationsTable, type Conversation, type Message } from "@workspace/db";
 import { CreateConversationBody, CreateConversationMessageBody, ListConversationsQueryParams } from "@workspace/api-zod";
-import { requireAuth } from "../lib/supabaseAuth";
+import { requireAuth } from "../lib/session";
 import { validateBody, parseQuery } from "../lib/validate";
 import { rateLimit } from "../lib/rateLimit";
 import { appendMessage, loadMessages, conversationPreview } from "../lib/conversations";

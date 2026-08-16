@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
-import { useCreateConversation } from '@workspace/api-client-react';
+import { useCreateConversation, useResendVerificationEmail } from '@workspace/api-client-react';
 import { Shell, Button } from '@/components/shell';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabaseClient';
 
 const quotes = [
   'You are allowed to take up space.',
@@ -23,7 +22,8 @@ export function Dashboard() {
   const [text, setText] = useState('');
   const [draftSaved, setDraftSaved] = useState(false);
   const createConversation = useCreateConversation();
-  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const resend = useResendVerificationEmail();
+  const [resendDone, setResendDone] = useState(false);
 
   const draftKey = user ? `tikvah-draft-${user.id}` : null;
 
@@ -63,17 +63,12 @@ export function Dashboard() {
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/50 px-5 py-4 text-sm">
             <span className="text-muted-foreground">Please verify your email to make sure we can always reach you.</span>
             <button
-              onClick={async () => {
-                if (!user.email) return;
-                setResendState('sending');
-                const { error } = await supabase.auth.resend({ type: 'signup', email: user.email });
-                setResendState(error ? 'idle' : 'sent');
-              }}
-              disabled={resendState !== 'idle'}
+              onClick={() => resend.mutate(undefined, { onSuccess: () => setResendDone(true) })}
+              disabled={resend.isPending || resendDone}
               data-testid="button-resend-verification-dashboard"
               className="font-semibold text-primary underline underline-offset-4 disabled:opacity-60"
             >
-              {resendState === 'sent' ? 'Sent — check your email' : 'Resend verification email'}
+              {resendDone ? 'Sent — check your email' : 'Resend verification email'}
             </button>
           </div>
         )}

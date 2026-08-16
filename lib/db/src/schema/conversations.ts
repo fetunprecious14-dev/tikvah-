@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { profilesTable } from './profiles';
+import { usersTable } from './users';
 
 export const conversationStatusEnum = pgEnum('conversation_status', [
   'awaiting_reply',
@@ -13,7 +13,7 @@ export const conversationsTable = pgTable('conversations', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
   status: conversationStatusEnum('status').notNull().default('awaiting_reply'),
   tags: text('tags')
     .array()

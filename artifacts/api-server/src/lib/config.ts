@@ -1,11 +1,14 @@
-/**
- * Required, no dev fallback — unlike `COOKIE_SECRET` before it, there's no
- * insecure-but-working default for "which Supabase project is this". Fail
- * fast with a clear message rather than let every request 401 mysteriously.
- */
-function requireEnv(value: string | undefined, name: string): string {
+import { logger } from "./logger";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+function requireInProduction(value: string | undefined, name: string, devFallback: string): string {
   if (value) return value;
-  throw new Error(`${name} environment variable is required but was not provided.`);
+  if (isProduction) {
+    throw new Error(`${name} environment variable is required in production but was not provided.`);
+  }
+  logger.warn(`${name} is not set — using an insecure development fallback. Set it before deploying.`);
+  return devFallback;
 }
 
 /**
@@ -16,9 +19,9 @@ function requireEnv(value: string | undefined, name: string): string {
  * only needs setting for a custom domain (or a non-Vercel host).
  * `VERCEL_PROJECT_PRODUCTION_URL` is preferred over `VERCEL_URL` because the
  * latter is the unique per-deployment URL — using it would bake a
- * deployment-specific host into reply-notification and urgent-alert links,
- * which then outlive that deployment. `VERCEL_URL` is still the sensible
- * fallback on preview deployments, where no production domain is assigned yet.
+ * deployment-specific host into verification and password-reset links, which
+ * then outlive that deployment. `VERCEL_URL` is still the sensible fallback on
+ * preview deployments, where no production domain is assigned yet.
  */
 function resolveAppUrl(): string {
   const explicitUrl = process.env.APP_URL;
@@ -31,18 +34,7 @@ function resolveAppUrl(): string {
 }
 
 export const config = {
-  /**
-   * Used to verify the `Authorization: Bearer <token>` header Supabase Auth
-   * issues to the frontend — see `lib/supabaseAuth.ts`. The anon/publishable
-   * key is safe here (it's the same key the browser holds); this never uses
-   * the service_role key, which must never run anywhere it could reach a
-   * browser.
-   */
-  supabaseUrl: requireEnv(process.env.SUPABASE_URL, "SUPABASE_URL"),
-  supabaseAnonKey: requireEnv(
-    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY,
-    "SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY)",
-  ),
+  cookieSecret: requireInProduction(process.env.COOKIE_SECRET, "COOKIE_SECRET", "dev-only-insecure-cookie-secret"),
   /** Base URL of the frontend, used to build links inside emails. Never has a trailing slash. */
   appUrl: resolveAppUrl(),
   /** Where urgent-flag alert emails are sent; alerts are skipped (logged) when unset. */

@@ -11,7 +11,7 @@ tags:
   - name: health
     description: Health operations
   - name: auth
-    description: Tikvah's app profile on top of Supabase Auth, which owns signup/login/logout/password reset
+    description: Registration, login, and email verification
   - name: conversations
     description: A user's private conversations with the Tikvah team
   - name: notifications
@@ -35,36 +35,66 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /auth/profile:
+  /auth/register:
     post:
-      operationId: registerProfile
+      operationId: registerUser
       tags: [auth]
-      summary: Create or update the signed-in Supabase Auth user's Tikvah profile
-      description: >
-        Called once, right after Supabase `signUp`/`signInWithPassword` returns a
-        session, so the profile (name, role) exists before the app relies on it.
-        Idempotent — safe to call more than once; a later call updates `name`.
-        Requests without a valid Supabase access token are rejected, so this can
-        only run once a session exists (it may not exist immediately after signup
-        if email confirmation is required — the profile is then created lazily,
-        the first time an authenticated request succeeds).
+      summary: Create an account
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterProfileRequest"
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
-        "200":
-          description: Profile created or updated
+        "201":
+          description: Account created and session started
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
         "401":
-          $ref: "#/components/responses/Unauthorized"
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Log out
+      responses:
+        "204":
+          description: Session ended
 
   /auth/me:
     get:
@@ -80,6 +110,82 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Confirm an email address with a verification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          description: Email confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerificationEmail
+      tags: [auth]
+      summary: Send a fresh verification email
+      responses:
+        "204":
+          description: Verification email sent (if the account isn't already verified)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/request-password-reset:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestPasswordResetRequest"
+      responses:
+        "204":
+          description: If an account exists for that email, a reset email was sent (always 204, to avoid revealing whether an email is registered)
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password using a reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password updated, session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /conversations:
     get:
@@ -589,14 +695,57 @@ components:
           format: date-time
       required: [id, name, email, role, emailVerified, createdAt]
 
-    RegisterProfileRequest:
+    RegisterRequest:
       type: object
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 120
-      required: [name]
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+          maxLength: 200
+      required: [name, email, password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    VerifyEmailRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    RequestPasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 10
+          maxLength: 200
+      required: [token, password]
 
     Message:
       type: object

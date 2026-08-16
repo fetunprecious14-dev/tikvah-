@@ -3,34 +3,39 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
+import { useLoginUser, getGetCurrentUserQueryKey } from '@workspace/api-client-react';
+import { LoginUserBody, type LoginRequest } from '@workspace/api-zod';
 import { Shell, Button } from '@/components/shell';
+import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabaseClient';
-import { loginSchema, type LoginFormValues } from '@/lib/authValidation';
 
 export function Login() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [serverError, setServerError] = useState('');
+  const loginUser = useLoginUser();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginRequest>({ resolver: zodResolver(LoginUserBody) });
 
   // Navigate once the auth context has actually observed the new user, rather
-  // than immediately inside the submit handler — that would race the app
-  // profile fetch and could bounce the auth-gated /dashboard route back here.
+  // than immediately inside the mutation callback — that would race the
+  // context update and could bounce the auth-gated /dashboard route back here.
   useEffect(() => {
     if (user) navigate('/dashboard');
   }, [user, navigate]);
 
-  const onSubmit = handleSubmit(async data => {
+  const onSubmit = handleSubmit(data => {
     setServerError('');
-    const { error } = await supabase.auth.signInWithPassword(data);
-    if (error) setServerError(error.message);
-    // On success, onAuthStateChange (see lib/auth.tsx) picks up the new
-    // session, which fetches the app profile and updates `user` above.
+    loginUser.mutate(
+      { data },
+      {
+        onSuccess: user => queryClient.setQueryData(getGetCurrentUserQueryKey(), user),
+        onError: error => setServerError(error instanceof Error ? error.message : 'Something went wrong. Please try again.'),
+      },
+    );
   });
 
   return (

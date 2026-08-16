@@ -3,7 +3,7 @@ import { and, eq, ilike, or } from "drizzle-orm";
 import { db, resourcesTable, resourceEventsTable } from "@workspace/db";
 import { ListResourcesQueryParams } from "@workspace/api-zod";
 import { parseQuery } from "../lib/validate";
-import { getUserFromRequest } from "../lib/supabaseAuth";
+import { getUserFromRequest } from "../lib/session";
 
 const router: IRouter = Router();
 
