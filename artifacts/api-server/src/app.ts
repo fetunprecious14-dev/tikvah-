@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type ErrorRequestHandler, type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 // Named import, not default: pino-http is CJS, and its `export default` becomes
@@ -57,5 +57,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(config.cookieSecret));
 
 app.use("/api", router);
+
+const unhandledErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
+  logger.error(
+    {
+      err: error,
+      method: req.method,
+      path: req.path,
+    },
+    "Unhandled API request error",
+  );
+
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  res.status(500).json({ message: "Something went wrong. Please try again." });
+};
+
+app.use(unhandledErrorHandler);
 
 export default app;

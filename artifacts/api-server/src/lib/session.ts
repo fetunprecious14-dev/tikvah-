@@ -21,7 +21,6 @@ export async function createSession(userId: string): Promise<string> {
 export function setSessionCookie(res: Response, token: string): void {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    signed: true,
     sameSite: "lax",
     secure: isProduction,
     maxAge: SESSION_TTL_MS,
@@ -38,7 +37,12 @@ export async function destroySessionByToken(token: string): Promise<void> {
 }
 
 export async function getUserFromRequest(req: Request): Promise<User | null> {
-  const token = req.signedCookies?.[SESSION_COOKIE] as string | undefined;
+  // The cookie contains an opaque, server-generated random token. We only
+  // trust it after hashing it and finding a live row in the sessions table, so
+  // an additional cookie signature adds no authorization guarantee. Keeping
+  // it unsigned also avoids depending on Express' request-bound signing state
+  // in serverless response adapters.
+  const token = req.cookies?.[SESSION_COOKIE] as string | undefined;
   if (!token) return null;
 
   const [row] = await db

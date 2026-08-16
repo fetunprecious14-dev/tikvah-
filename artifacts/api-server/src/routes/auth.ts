@@ -96,7 +96,7 @@ router.post("/auth/login", authRateLimit, validateBody(LoginUserBody), async (re
 });
 
 router.post("/auth/logout", async (req, res) => {
-  const token = req.signedCookies?.[SESSION_COOKIE] as string | undefined;
+  const token = req.cookies?.[SESSION_COOKIE] as string | undefined;
   if (token) {
     await destroySessionByToken(token);
   }
@@ -140,7 +140,7 @@ router.post("/auth/verify-email", validateBody(VerifyEmailBody), async (req, res
 
   // Clicking a verification link proves email ownership — sign the user in if they
   // aren't already, so the link works even from a fresh browser/device.
-  const existingSession = req.signedCookies?.[SESSION_COOKIE] as string | undefined;
+  const existingSession = req.cookies?.[SESSION_COOKIE] as string | undefined;
   if (!existingSession) {
     const sessionToken = await createSession(user.id);
     setSessionCookie(res, sessionToken);
