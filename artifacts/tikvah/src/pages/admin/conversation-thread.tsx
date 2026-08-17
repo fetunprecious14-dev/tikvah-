@@ -11,6 +11,7 @@ import {
 } from '@workspace/api-client-react';
 import { Shell, Button } from '@/components/shell';
 import { queryClient } from '@/lib/queryClient';
+import { AdminErrorState, AdminMutationError } from './admin-feedback';
 
 const statusOptions = [
   { value: ConversationStatus.awaiting_reply, label: 'Awaiting reply' },
@@ -21,7 +22,7 @@ const statusOptions = [
 
 export function AdminConversationThread({ params }: { params: { id: string } }) {
   const { id } = params;
-  const { data: conversation, isLoading } = useAdminGetConversation(id);
+  const { data: conversation, isLoading, isError, error, refetch, isFetching } = useAdminGetConversation(id);
   const sendMessage = useAdminCreateConversationMessage();
   const updateConversation = useAdminUpdateConversation();
   const [text, setText] = useState('');
@@ -37,29 +38,45 @@ export function AdminConversationThread({ params }: { params: { id: string } }) 
 
   const submit = () => {
     if (!text.trim() || sendMessage.isPending) return;
+    sendMessage.reset();
     sendMessage.mutate({ id, data: { body: text } }, { onSuccess: () => { setText(''); refresh(); } });
   };
 
   const setStatus = (status: (typeof statusOptions)[number]['value']) => {
+    updateConversation.reset();
     updateConversation.mutate({ id, data: { status } }, { onSuccess: refresh });
   };
 
   const addTag = () => {
     if (!tagInput.trim() || !conversation) return;
     const tags = Array.from(new Set([...conversation.tags, tagInput.trim()]));
-    updateConversation.mutate({ id, data: { tags } }, { onSuccess: refresh });
-    setTagInput('');
+    updateConversation.reset();
+    updateConversation.mutate({ id, data: { tags } }, { onSuccess: () => { setTagInput(''); refresh(); } });
   };
 
   const removeTag = (tag: string) => {
     if (!conversation) return;
+    updateConversation.reset();
     updateConversation.mutate({ id, data: { tags: conversation.tags.filter(t => t !== tag) } }, { onSuccess: refresh });
   };
 
-  if (isLoading || !conversation) {
+  if (isLoading) {
     return (
       <Shell>
         <section className="mx-auto max-w-[820px] px-5 py-24 text-center sm:px-8"><p className="text-sm text-muted-foreground">Loading conversation…</p></section>
+      </Shell>
+    );
+  }
+
+  if (isError || !conversation) {
+    return (
+      <Shell>
+        <section className="mx-auto max-w-[820px] px-5 py-16 sm:px-8">
+          <Link href="/admin" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary">
+            <ArrowLeft size={13} /> Back to inbox
+          </Link>
+          <AdminErrorState error={error} onRetry={() => { void refetch(); }} retrying={isFetching} title="We could not load this conversation." />
+        </section>
       </Shell>
     );
   }
@@ -109,6 +126,9 @@ export function AdminConversationThread({ params }: { params: { id: string } }) 
             />
           </div>
         </div>
+        <div className="mt-3">
+          <AdminMutationError error={updateConversation.error} fallback="We could not update this conversation. Please try again." />
+        </div>
 
         <div className="mt-6 space-y-5">
           {conversation.messages.map(message => (
@@ -136,6 +156,9 @@ export function AdminConversationThread({ params }: { params: { id: string } }) 
             placeholder="Write a compassionate reply…"
             className="min-h-[130px] w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground/60"
           />
+          <div className="mt-3">
+            <AdminMutationError error={sendMessage.error} fallback="We could not send your reply. Your message is still here—please try again." />
+          </div>
           <div className="mt-4 flex justify-end">
             <Button onClick={submit} disabled={!text.trim() || sendMessage.isPending} testId="button-send-admin-reply">
               {sendMessage.isPending ? 'Sending…' : <>Send reply <ArrowRight size={15} /></>}

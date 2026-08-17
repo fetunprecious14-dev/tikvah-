@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "promote-admin": "tsx --env-file=../.env ./src/promoteAdmin.ts",
+    "smoke-admin-access": "tsx --env-file=../.env ./src/smokeAdminAccess.ts",
     "seed-resources": "tsx --env-file=../.env ./src/seedResources.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

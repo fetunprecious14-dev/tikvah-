@@ -1,6 +1,7 @@
 import { useAdminGetAnalytics } from '@workspace/api-client-react';
 import { Shell, PageIntro } from '@/components/shell';
 import { AdminNav } from './admin-nav';
+import { AdminErrorState } from './admin-feedback';
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
@@ -12,7 +13,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 }
 
 export function AdminAnalytics() {
-  const { data, isLoading } = useAdminGetAnalytics();
+  const { data, isLoading, isError, error, refetch, isFetching } = useAdminGetAnalytics();
 
   return (
     <Shell>
@@ -20,8 +21,12 @@ export function AdminAnalytics() {
       <section className="mx-auto max-w-[1100px] px-5 pb-24 sm:px-8">
         <AdminNav active="analytics" />
 
-        {isLoading || !data ? (
+        {isLoading ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>
+        ) : isError ? (
+          <AdminErrorState error={error} onRetry={() => { void refetch(); }} retrying={isFetching} title="We could not load the admin analytics." />
+        ) : !data ? (
+          <p className="py-16 text-center text-sm text-muted-foreground">No analytics are available yet.</p>
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatTile label="Total users" value={data.totalUsers} />

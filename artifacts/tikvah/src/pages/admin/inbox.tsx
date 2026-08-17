@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { useAdminListConversations, ConversationStatus } from '@workspace/api-client-react';
 import { Shell, PageIntro } from '@/components/shell';
 import { AdminNav } from './admin-nav';
+import { AdminErrorState } from './admin-feedback';
 
 const filters: Array<{ value: 'all' | (typeof ConversationStatus)[keyof typeof ConversationStatus]; label: string }> = [
   { value: 'all', label: 'All' },
@@ -24,7 +25,7 @@ export function AdminInbox() {
   const [status, setStatus] = useState<(typeof filters)[number]['value']>('all');
   const [search, setSearch] = useState('');
 
-  const { data: conversations = [], isLoading } = useAdminListConversations({
+  const { data: conversations = [], isLoading, isError, error, refetch, isFetching } = useAdminListConversations({
     status: status === 'all' ? undefined : status,
     search: search || undefined,
   });
@@ -65,6 +66,8 @@ export function AdminInbox() {
 
         {isLoading ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>
+        ) : isError ? (
+          <AdminErrorState error={error} onRetry={() => { void refetch(); }} retrying={isFetching} title="We could not load the admin inbox." />
         ) : conversations.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Nothing here right now.</p>
         ) : (

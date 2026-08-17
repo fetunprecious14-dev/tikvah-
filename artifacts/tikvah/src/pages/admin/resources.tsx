@@ -13,6 +13,7 @@ import {
 import { Shell, PageIntro, Button } from '@/components/shell';
 import { queryClient } from '@/lib/queryClient';
 import { AdminNav } from './admin-nav';
+import { AdminErrorState, AdminMutationError } from './admin-feedback';
 
 const topicOptions = Object.values(ResourceTopic);
 const typeOptions = Object.values(ResourceType);
@@ -126,7 +127,7 @@ function ResourceForm({
 }
 
 export function AdminResources() {
-  const { data: resources = [], isLoading } = useAdminListResources();
+  const { data: resources = [], isLoading, isError, error, refetch, isFetching } = useAdminListResources();
   const createResource = useAdminCreateResource();
   const updateResource = useAdminUpdateResource();
   const deleteResource = useAdminDeleteResource();
@@ -139,19 +140,20 @@ export function AdminResources() {
   const handleCreate = (values: ResourceFormValues) => {
     createResource.mutate(
       { data: { ...values, url: values.url || undefined, body: values.body || undefined } },
-      { onSuccess: () => { setCreating(false); refresh(); } },
+      { onSuccess: () => { setCreating(false); createResource.reset(); refresh(); } },
     );
   };
 
   const handleUpdate = (id: string, values: ResourceFormValues) => {
     updateResource.mutate(
       { id, data: { ...values, url: values.url || null, body: values.body || null } },
-      { onSuccess: () => { setEditingId(null); refresh(); } },
+      { onSuccess: () => { setEditingId(null); updateResource.reset(); refresh(); } },
     );
   };
 
   const handleDelete = (resource: Resource) => {
     if (!window.confirm(`Remove "${resource.title}" from the library?`)) return;
+    deleteResource.reset();
     deleteResource.mutate({ id: resource.id }, { onSuccess: refresh });
   };
 
@@ -164,7 +166,7 @@ export function AdminResources() {
         <div className="mt-8 flex items-center justify-between border-y border-border py-5">
           <p className="text-sm text-muted-foreground">{resources.length} resource{resources.length === 1 ? '' : 's'}</p>
           {!creating && (
-            <Button onClick={() => setCreating(true)} testId="button-add-resource">
+            <Button onClick={() => { createResource.reset(); setCreating(true); }} testId="button-add-resource">
               <Plus size={15} /> Add resource
             </Button>
           )}
@@ -173,29 +175,41 @@ export function AdminResources() {
         {creating && (
           <div className="mt-6">
             <ResourceForm initial={emptyForm} submitting={createResource.isPending} onCancel={() => setCreating(false)} onSubmit={handleCreate} />
+            <div className="mt-3">
+              <AdminMutationError error={createResource.error} fallback="We could not add this resource. Your draft is still here—please try again." />
+            </div>
           </div>
         )}
 
         {isLoading ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>
+        ) : isError ? (
+          <AdminErrorState error={error} onRetry={() => { void refetch(); }} retrying={isFetching} title="We could not load the resource library." />
+        ) : resources.length === 0 ? (
+          <p className="py-16 text-center text-sm text-muted-foreground">No resources have been added yet.</p>
         ) : (
           <div className="mt-6 space-y-3">
+            <AdminMutationError error={deleteResource.error} fallback="We could not remove that resource. Please try again." />
             {resources.map(resource =>
               editingId === resource.id ? (
-                <ResourceForm
-                  key={resource.id}
-                  initial={{
-                    title: resource.title,
-                    description: resource.description,
-                    type: resource.type,
-                    topic: resource.topic,
-                    url: resource.url ?? '',
-                    body: resource.body ?? '',
-                  }}
-                  submitting={updateResource.isPending}
-                  onCancel={() => setEditingId(null)}
-                  onSubmit={values => handleUpdate(resource.id, values)}
-                />
+                <div key={resource.id}>
+                  <ResourceForm
+                    initial={{
+                      title: resource.title,
+                      description: resource.description,
+                      type: resource.type,
+                      topic: resource.topic,
+                      url: resource.url ?? '',
+                      body: resource.body ?? '',
+                    }}
+                    submitting={updateResource.isPending}
+                    onCancel={() => setEditingId(null)}
+                    onSubmit={values => handleUpdate(resource.id, values)}
+                  />
+                  <div className="mt-3">
+                    <AdminMutationError error={updateResource.error} fallback="We could not save those changes. Your edits are still here—please try again." />
+                  </div>
+                </div>
               ) : (
                 <div key={resource.id} data-testid={`admin-resource-${resource.id}`} className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5">
                   <div>
@@ -205,7 +219,7 @@ export function AdminResources() {
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button
-                      onClick={() => setEditingId(resource.id)}
+                      onClick={() => { updateResource.reset(); setEditingId(resource.id); }}
                       data-testid={`button-edit-resource-${resource.id}`}
                       className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary"
                     >
