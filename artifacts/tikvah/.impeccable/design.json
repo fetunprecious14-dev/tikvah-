@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-25T09:16:00+01:00",
+  "title": "Design System: Tikvah",
+  "extensions": {
+    "colorMeta": {
+      "evergreen": {
+        "role": "primary",
+        "displayName": "Evergreen",
+        "canonical": "hsl(155 29% 31%)",
+        "tonalRamp": [
+          "oklch(24% 0.05 158)",
+          "oklch(34% 0.06 158)",
+          "oklch(44% 0.07 158)",
+          "oklch(54% 0.07 158)",
+          "oklch(64% 0.06 158)",
+          "oklch(74% 0.05 158)",
+          "oklch(85% 0.03 158)",
+          "oklch(95% 0.01 158)"
+        ]
+      },
+      "warm-paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "hsl(42 36% 95%)",
+        "tonalRamp": [
+          "oklch(18% 0.02 84)",
+          "oklch(30% 0.025 84)",
+          "oklch(42% 0.03 84)",
+          "oklch(54% 0.035 84)",
+          "oklch(66% 0.04 84)",
+          "oklch(78% 0.04 84)",
+          "oklch(88% 0.035 84)",
+          "oklch(96% 0.025 84)"
+        ]
+      },
+      "deep-ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "hsl(154 20% 17%)",
+        "tonalRamp": [
+          "oklch(18% 0.03 158)",
+          "oklch(29% 0.035 158)",
+          "oklch(40% 0.04 158)",
+          "oklch(52% 0.04 158)",
+          "oklch(64% 0.035 158)",
+          "oklch(76% 0.025 158)",
+          "oklch(87% 0.015 158)",
+          "oklch(95% 0.008 158)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Editorial Display",
+        "purpose": "Page orientation and reflective section headings."
+      },
+      "body": {
+        "displayName": "Calm Interface",
+        "purpose": "Support copy, navigation, forms, and controls."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient-soft",
+        "value": "0 20px 60px rgba(49, 67, 54, 0.08)",
+        "purpose": "Temporary elevated surfaces and intentional hover feedback."
+      }
+    ],
+    "motion": [
+      {
+        "name": "reveal",
+        "value": "750ms cubic-bezier(.2,.75,.25,1)",
+        "purpose": "A restrained first-view entrance with reduced-motion fallback."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on a focused surface.",
+      "html": "<button class=\"ds-btn-primary\">Save and publish</button>",
+      "css": ".ds-btn-primary{background:hsl(155 29% 31%);color:hsl(42 36% 95%);border:1px solid transparent;border-radius:12px;padding:8px 16px;font:600 14px 'DM Sans',sans-serif;transition:transform .2s,box-shadow .2s}.ds-btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(44,80,60,.18)}.ds-btn-primary:focus-visible{outline:2px solid hsl(155 29% 31%);outline-offset:4px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "A secondary or cancel action.",
+      "html": "<button class=\"ds-btn-outline\">Save draft</button>",
+      "css": ".ds-btn-outline{background:transparent;color:hsl(154 20% 17%);border:1px solid hsl(38 17% 84%);border-radius:12px;padding:8px 16px;font:600 14px 'DM Sans',sans-serif}.ds-btn-outline:hover{border-color:hsl(155 29% 31%);color:hsl(155 29% 31%)}.ds-btn-outline:focus-visible{outline:2px solid hsl(155 29% 31%);outline-offset:4px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A clearly labelled management or search field.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search professional help\" />",
+      "css": ".ds-input{width:100%;background:transparent;color:hsl(154 20% 17%);border:1px solid hsl(38 17% 84%);border-radius:8px;padding:8px 12px;font:400 14px 'DM Sans',sans-serif}.ds-input:focus-visible{outline:2px solid hsl(155 29% 31%);outline-offset:2px}.ds-input::placeholder{color:hsl(154 9% 43%)}"
+    },
+    {
+      "name": "Profile Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A professional profile with clear care details and contact actions.",
+      "html": "<article class=\"ds-card\"><h3>Professional name</h3><p>Role · credentials</p></article>",
+      "css": ".ds-card{background:hsl(42 33% 97%);color:hsl(154 20% 17%);border:1px solid hsl(38 17% 84%);border-radius:12px;padding:24px}.ds-card h3{margin:0;font:400 30px/1.15 'Newsreader',Georgia,serif}.ds-card p{margin:8px 0 0;color:hsl(154 9% 43%);font:400 14px/1.6 'DM Sans',sans-serif}.ds-card:focus-within{outline:2px solid hsl(155 29% 31%);outline-offset:3px}"
+    },
+    {
+      "name": "Navigation Link",
+      "kind": "nav",
+      "description": "A quiet link with a clear evergreen active state.",
+      "html": "<a class=\"ds-nav\" href=\"#\">Professional help</a>",
+      "css": ".ds-nav{color:hsl(154 9% 43%);font:500 13px 'DM Sans',sans-serif;text-decoration:none}.ds-nav:hover,.ds-nav:focus-visible{color:hsl(155 29% 31%)}.ds-nav:focus-visible{outline:2px solid hsl(155 29% 31%);outline-offset:4px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Shelter",
+    "overview": "Tikvah pairs the composure of an editorial reading experience with the reassurance of a carefully prepared support space. Warm paper surfaces, deep evergreen actions, generous pauses, and humane copy keep the interface calm without making important decisions vague.",
+    "keyCharacteristics": [
+      "Warm, low-contrast surfaces anchored by a deep evergreen action color.",
+      "Editorial serif headlines paired with a practical sans-serif interface voice.",
+      "Quiet borders, restrained depth, and generous vertical rhythm.",
+      "Direct state labels and recovery-oriented error copy."
+    ],
+    "rules": [
+      {
+        "name": "The Deliberate Green Rule",
+        "body": "Reserve evergreen for actions, focus, and meaningful state—not decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Newsreader carries reflection and orientation; DM Sans carries every action and detail.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-at-Rest Rule",
+        "body": "Persistent cards use border or tone; shadows indicate elevation or interaction.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do make the safest useful next action obvious within the first scan.",
+      "Do use warm surfaces and whitespace to separate content before adding decoration.",
+      "Do write control labels that state the outcome.",
+      "Do provide loading, empty, error, disabled, and recovery states."
+    ],
+    "donts": [
+      "Don't use raw bright colors when an established semantic token exists.",
+      "Don't blur the distinction between professional support and emergency care.",
+      "Don't hide important fields behind icon-only controls without accessible labels.",
+      "Don't invent practitioner claims, verification, availability, or imagery."
+    ]
+  }
+}

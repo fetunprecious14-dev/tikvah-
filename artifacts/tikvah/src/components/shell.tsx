@@ -42,12 +42,14 @@ function useNavItems() {
       { href: '/', label: 'Home' },
       { href: '/about', label: 'About' },
       { href: '/resources', label: 'Resources' },
+      { href: '/professionals', label: 'Professional help' },
     ];
   }
   const items = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/conversations', label: 'Conversations' },
     { href: '/resources', label: 'Resources' },
+    { href: '/professionals', label: 'Professional help' },
   ];
   if (user.role === 'admin') items.push({ href: '/admin', label: 'Admin' });
   return items;
@@ -91,29 +93,17 @@ export function Header() {
           >
             Need help now <ArrowUpRight size={14} />
           </Link>
-          {!isLoading && (user ? (
-            <button
-              onClick={handleLogout}
-              data-testid="button-logout"
-              className="hidden rounded-full border border-border px-4 py-2 text-[12px] font-semibold text-foreground transition hover:border-primary hover:text-primary sm:flex"
-            >
-              Sign out
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              data-testid="link-header-login"
-              className="hidden rounded-full bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground transition hover:-translate-y-0.5 sm:flex"
-            >
-              Sign in
-            </Link>
-          ))}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            data-testid="button-mobile-menu"
-            className="grid size-9 place-items-center rounded-full text-foreground md:hidden"
-          >
+          {!isLoading &&
+            (user ? (
+              <button onClick={handleLogout} data-testid="button-logout" className="hidden rounded-full border border-border px-4 py-2 text-[12px] font-semibold text-foreground transition hover:border-primary hover:text-primary sm:flex">
+                Sign out
+              </button>
+            ) : (
+              <Link href="/login" data-testid="link-header-login" className="hidden rounded-full bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground transition hover:-translate-y-0.5 sm:flex">
+                Sign in
+              </Link>
+            ))}
+          <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? 'Close menu' : 'Open menu'} data-testid="button-mobile-menu" className="grid size-9 place-items-center rounded-full text-foreground md:hidden">
             {mobileOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
         </div>
@@ -163,16 +153,29 @@ export function Footer() {
         <div>
           <p className="mb-4 text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Explore</p>
           <div className="flex flex-col gap-3 text-sm">
-            <Link href="/dashboard" data-testid="link-footer-dashboard" className="hover:text-primary">Your dashboard</Link>
-            <Link href="/resources" data-testid="link-footer-resources" className="hover:text-primary">Resources</Link>
-            <Link href="/crisis" data-testid="link-footer-crisis" className="hover:text-primary">Crisis support</Link>
+            <Link href="/dashboard" data-testid="link-footer-dashboard" className="hover:text-primary">
+              Your dashboard
+            </Link>
+            <Link href="/resources" data-testid="link-footer-resources" className="hover:text-primary">
+              Resources
+            </Link>
+            <Link href="/professionals" data-testid="link-footer-professionals" className="hover:text-primary">
+              Professional help
+            </Link>
+            <Link href="/crisis" data-testid="link-footer-crisis" className="hover:text-primary">
+              Crisis support
+            </Link>
           </div>
         </div>
         <div>
           <p className="mb-4 text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Learn</p>
           <div className="flex flex-col gap-3 text-sm">
-            <Link href="/about" data-testid="link-footer-about" className="hover:text-primary">About Tikvah</Link>
-            <Link href="/privacy" data-testid="link-footer-privacy" className="hover:text-primary">Privacy promise</Link>
+            <Link href="/about" data-testid="link-footer-about" className="hover:text-primary">
+              About Tikvah
+            </Link>
+            <Link href="/privacy" data-testid="link-footer-privacy" className="hover:text-primary">
+              Privacy promise
+            </Link>
           </div>
         </div>
         <div>
@@ -216,7 +219,12 @@ export function Button({
   disabled?: boolean;
 }) {
   const cls = `inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[13px] font-semibold transition duration-300 ${secondary ? 'border border-border bg-background text-foreground hover:border-primary hover:text-primary' : 'bg-primary text-primary-foreground hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(44,80,60,.18)]'} ${disabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`;
-  if (href) return <Link href={href} className={cls} data-testid={testId}>{children}</Link>;
+  if (href)
+    return (
+      <Link href={href} className={cls} data-testid={testId}>
+        {children}
+      </Link>
+    );
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={cls} data-testid={testId}>
       {children}
@@ -233,4 +241,3 @@ export function PageIntro({ eyebrow, title, children }: { eyebrow: string; title
     </section>
   );
 }
-

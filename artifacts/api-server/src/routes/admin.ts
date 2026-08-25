@@ -1,16 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, arrayContains, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
-import {
-  db,
-  conversationsTable,
-  messagesTable,
-  usersTable,
-  resourcesTable,
-  resourceEventsTable,
-  type Conversation,
-  type Message,
-  type User,
-} from "@workspace/db";
+import { and, arrayContains, asc, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
+import { db, conversationsTable, messagesTable, usersTable, resourcesTable, resourceEventsTable, professionalsTable, type Conversation, type Message, type User } from "@workspace/db";
 import {
   AdminListConversationsQueryParams,
   AdminUpdateConversationBody,
@@ -18,6 +8,9 @@ import {
   AdminListResourcesQueryParams,
   AdminCreateResourceBody,
   AdminUpdateResourceBody,
+  AdminListProfessionalsQueryParams,
+  AdminCreateProfessionalBody,
+  AdminUpdateProfessionalBody,
 } from "@workspace/api-zod";
 import { requireAuth, requireAdmin } from "../lib/session";
 import { validateBody, parseQuery } from "../lib/validate";
@@ -28,6 +21,10 @@ const router: IRouter = Router();
 router.use("/admin", requireAuth, requireAdmin);
 
 const TIKVAH_TEAM_LABEL = "Tikvah team";
+
+function hasContactMethod(professional: { phone?: string | null; email?: string | null; website?: string | null }) {
+  return Boolean(professional.phone?.trim() || professional.email?.trim() || professional.website?.trim());
+}
 
 function serializeMessage(message: Message, userName: string) {
   return {
@@ -72,7 +69,11 @@ router.get("/admin/conversations", async (req, res) => {
     .orderBy(sql`case when ${conversationsTable.status} = 'urgent' then 0 else 1 end`, desc(conversationsTable.lastMessageAt));
 
   const withMessages = await Promise.all(
-    rows.map(async ({ conversation, user }) => ({ conversation, user, messages: await loadMessages(conversation.id) })),
+    rows.map(async ({ conversation, user }) => ({
+      conversation,
+      user,
+      messages: await loadMessages(conversation.id),
+    })),
   );
 
   res.status(200).json(withMessages.map(({ conversation, user, messages }) => serializeAdminConversation(conversation, messages, user)));
@@ -99,7 +100,10 @@ router.get("/admin/conversations/:id", async (req, res) => {
 });
 
 router.patch("/admin/conversations/:id", validateBody(AdminUpdateConversationBody), async (req, res) => {
-  const { status, tags } = req.body as { status?: Conversation["status"]; tags?: string[] };
+  const { status, tags } = req.body as {
+    status?: Conversation["status"];
+    tags?: string[];
+  };
 
   const [updated] = await db
     .update(conversationsTable)
@@ -120,13 +124,22 @@ router.patch("/admin/conversations/:id", validateBody(AdminUpdateConversationBod
 router.post("/admin/conversations/:id/messages", validateBody(CreateConversationMessageBody), async (req, res) => {
   const { body } = req.body as { body: string };
 
-  const [conversation] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, String(req.params.id))).limit(1);
+  const [conversation] = await db
+    .select()
+    .from(conversationsTable)
+    .where(eq(conversationsTable.id, String(req.params.id)))
+    .limit(1);
   if (!conversation) {
     res.status(404).json({ message: "Conversation not found." });
     return;
   }
 
-  const message = await appendMessage({ conversation, senderType: "admin", senderId: req.user!.id, body });
+  const message = await appendMessage({
+    conversation,
+    senderType: "admin",
+    senderId: req.user!.id,
+    body,
+  });
   res.status(201).json(serializeMessage(message, TIKVAH_TEAM_LABEL));
 });
 
@@ -160,7 +173,14 @@ router.post("/admin/resources", validateBody(AdminCreateResourceBody), async (re
 
   const [resource] = await db
     .insert(resourcesTable)
-    .values({ title, description, type, topic, url: url ?? null, body: body ?? null })
+    .values({
+      title,
+      description,
+      type,
+      topic,
+      url: url ?? null,
+      body: body ?? null,
+    })
     .returning();
 
   res.status(201).json(resource);
@@ -191,10 +211,87 @@ router.patch("/admin/resources/:id", validateBody(AdminUpdateResourceBody), asyn
 });
 
 router.delete("/admin/resources/:id", async (req, res) => {
-  const [resource] = await db.delete(resourcesTable).where(eq(resourcesTable.id, String(req.params.id))).returning();
+  const [resource] = await db
+    .delete(resourcesTable)
+    .where(eq(resourcesTable.id, String(req.params.id)))
+    .returning();
 
   if (!resource) {
     res.status(404).json({ message: "Resource not found." });
+    return;
+  }
+
+  res.status(204).send();
+});
+
+router.get("/admin/professionals", async (req, res) => {
+  const { search, published } = parseQuery(AdminListProfessionalsQueryParams, req.query);
+  const conditions = [
+    published === undefined ? undefined : eq(professionalsTable.isPublished, published),
+    search ? or(ilike(professionalsTable.name, `%${search}%`), ilike(professionalsTable.profession, `%${search}%`), ilike(professionalsTable.bio, `%${search}%`), ilike(professionalsTable.location, `%${search}%`)) : undefined,
+  ].filter((condition): condition is NonNullable<typeof condition> => condition != null);
+
+  const professionals = await db
+    .select()
+    .from(professionalsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(asc(professionalsTable.displayOrder), asc(professionalsTable.name));
+
+  res.status(200).json(professionals);
+});
+
+router.post("/admin/professionals", validateBody(AdminCreateProfessionalBody), async (req, res) => {
+  const professional = req.body as typeof professionalsTable.$inferInsert;
+
+  if (professional.isPublished && !hasContactMethod(professional)) {
+    res.status(400).json({
+      message: "Add a phone number, email address, or website before publishing.",
+    });
+    return;
+  }
+
+  const [created] = await db.insert(professionalsTable).values(professional).returning();
+  res.status(201).json(created);
+});
+
+router.patch("/admin/professionals/:id", validateBody(AdminUpdateProfessionalBody), async (req, res) => {
+  const [existing] = await db
+    .select()
+    .from(professionalsTable)
+    .where(eq(professionalsTable.id, String(req.params.id)))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ message: "Professional not found." });
+    return;
+  }
+
+  const updates = req.body as Partial<typeof professionalsTable.$inferInsert>;
+  const merged = { ...existing, ...updates };
+  if (merged.isPublished && !hasContactMethod(merged)) {
+    res.status(400).json({
+      message: "Add a phone number, email address, or website before publishing.",
+    });
+    return;
+  }
+
+  const [updated] = await db
+    .update(professionalsTable)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(professionalsTable.id, existing.id))
+    .returning();
+
+  res.status(200).json(updated);
+});
+
+router.delete("/admin/professionals/:id", async (req, res) => {
+  const [professional] = await db
+    .delete(professionalsTable)
+    .where(eq(professionalsTable.id, String(req.params.id)))
+    .returning();
+
+  if (!professional) {
+    res.status(404).json({ message: "Professional not found." });
     return;
   }
 
@@ -213,12 +310,17 @@ router.get("/admin/analytics", async (req, res) => {
     .where(gte(usersTable.createdAt, sevenDaysAgo));
 
   const [activeUsersRow] = await db
-    .select({ count: sql<number>`count(distinct ${messagesTable.senderId})::int` })
+    .select({
+      count: sql<number>`count(distinct ${messagesTable.senderId})::int`,
+    })
     .from(messagesTable)
     .where(and(eq(messagesTable.senderType, "user"), gte(messagesTable.createdAt, thirtyDaysAgo)));
 
   const statusCounts = await db
-    .select({ status: conversationsTable.status, count: sql<number>`count(*)::int` })
+    .select({
+      status: conversationsTable.status,
+      count: sql<number>`count(*)::int`,
+    })
     .from(conversationsTable)
     .groupBy(conversationsTable.status);
 
@@ -249,9 +351,7 @@ router.get("/admin/analytics", async (req, res) => {
       responseTimesMs.push(firstAdminReply.createdAt.getTime() - firstUserMessage.createdAt.getTime());
     }
   }
-  const avgResponseTimeMinutes = responseTimesMs.length
-    ? Math.round(responseTimesMs.reduce((sum, ms) => sum + ms, 0) / responseTimesMs.length / 60000)
-    : null;
+  const avgResponseTimeMinutes = responseTimesMs.length ? Math.round(responseTimesMs.reduce((sum, ms) => sum + ms, 0) / responseTimesMs.length / 60000) : null;
 
   res.status(200).json({
     totalUsers: totalUsersRow.count,

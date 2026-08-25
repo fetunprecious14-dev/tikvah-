@@ -304,6 +304,36 @@ export const RecordResourceViewResponse = zod.void()
 
 
 /**
+ * @summary Browse published professionals
+ */
+export const ListProfessionalsQueryParams = zod.object({
+  "search": zod.coerce.string().optional()
+})
+
+export const ListProfessionalsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "profession": zod.string(),
+  "credentials": zod.string().nullable(),
+  "bio": zod.string(),
+  "specialties": zod.array(zod.string()),
+  "languages": zod.array(zod.string()),
+  "phone": zod.string().nullable(),
+  "email": zod.string().email().nullable(),
+  "website": zod.string().url().nullable(),
+  "location": zod.string().nullable(),
+  "offersRemote": zod.boolean(),
+  "offersInPerson": zod.boolean(),
+  "imageUrl": zod.string().url().nullable(),
+  "isPublished": zod.boolean(),
+  "displayOrder": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListProfessionalsResponse = zod.array(ListProfessionalsResponseItem)
+
+
+/**
  * @summary List all conversations (admin)
  */
 export const AdminListConversationsQueryParams = zod.object({
@@ -510,6 +540,189 @@ export const AdminDeleteResourceParams = zod.object({
 })
 
 export const AdminDeleteResourceResponse = zod.void()
+
+
+/**
+ * @summary List all professionals for management
+ */
+export const AdminListProfessionalsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "published": zod.coerce.boolean().optional()
+})
+
+export const AdminListProfessionalsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "profession": zod.string(),
+  "credentials": zod.string().nullable(),
+  "bio": zod.string(),
+  "specialties": zod.array(zod.string()),
+  "languages": zod.array(zod.string()),
+  "phone": zod.string().nullable(),
+  "email": zod.string().email().nullable(),
+  "website": zod.string().url().nullable(),
+  "location": zod.string().nullable(),
+  "offersRemote": zod.boolean(),
+  "offersInPerson": zod.boolean(),
+  "imageUrl": zod.string().url().nullable(),
+  "isPublished": zod.boolean(),
+  "displayOrder": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListProfessionalsResponse = zod.array(AdminListProfessionalsResponseItem)
+
+
+/**
+ * @summary Add a professional
+ */
+export const adminCreateProfessionalBodyNameMax = 120;
+
+export const adminCreateProfessionalBodyProfessionMax = 120;
+
+export const adminCreateProfessionalBodyCredentialsMax = 160;
+
+export const adminCreateProfessionalBodyBioMax = 1000;
+
+export const adminCreateProfessionalBodySpecialtiesItemMax = 80;
+
+export const adminCreateProfessionalBodySpecialtiesMax = 12;
+
+export const adminCreateProfessionalBodyLanguagesItemMax = 60;
+
+export const adminCreateProfessionalBodyLanguagesMax = 12;
+
+export const adminCreateProfessionalBodyPhoneMax = 40;
+
+export const adminCreateProfessionalBodyLocationMax = 160;
+
+export const adminCreateProfessionalBodyOffersRemoteDefault = false;
+export const adminCreateProfessionalBodyOffersInPersonDefault = false;
+export const adminCreateProfessionalBodyIsPublishedDefault = false;
+export const adminCreateProfessionalBodyDisplayOrderDefault = 0;
+export const adminCreateProfessionalBodyDisplayOrderMin = 0;
+
+
+
+export const AdminCreateProfessionalBody = zod.object({
+  "name": zod.string().min(1).max(adminCreateProfessionalBodyNameMax),
+  "profession": zod.string().min(1).max(adminCreateProfessionalBodyProfessionMax),
+  "credentials": zod.string().max(adminCreateProfessionalBodyCredentialsMax).nullish(),
+  "bio": zod.string().min(1).max(adminCreateProfessionalBodyBioMax),
+  "specialties": zod.array(zod.string().min(1).max(adminCreateProfessionalBodySpecialtiesItemMax)).max(adminCreateProfessionalBodySpecialtiesMax),
+  "languages": zod.array(zod.string().min(1).max(adminCreateProfessionalBodyLanguagesItemMax)).max(adminCreateProfessionalBodyLanguagesMax),
+  "phone": zod.string().max(adminCreateProfessionalBodyPhoneMax).nullish(),
+  "email": zod.string().email().nullish(),
+  "website": zod.string().url().nullish(),
+  "location": zod.string().max(adminCreateProfessionalBodyLocationMax).nullish(),
+  "offersRemote": zod.boolean().default(adminCreateProfessionalBodyOffersRemoteDefault),
+  "offersInPerson": zod.boolean().default(adminCreateProfessionalBodyOffersInPersonDefault),
+  "imageUrl": zod.string().url().nullish(),
+  "isPublished": zod.boolean().default(adminCreateProfessionalBodyIsPublishedDefault),
+  "displayOrder": zod.number().min(adminCreateProfessionalBodyDisplayOrderMin).default(adminCreateProfessionalBodyDisplayOrderDefault)
+})
+
+export const AdminCreateProfessionalResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "profession": zod.string(),
+  "credentials": zod.string().nullable(),
+  "bio": zod.string(),
+  "specialties": zod.array(zod.string()),
+  "languages": zod.array(zod.string()),
+  "phone": zod.string().nullable(),
+  "email": zod.string().email().nullable(),
+  "website": zod.string().url().nullable(),
+  "location": zod.string().nullable(),
+  "offersRemote": zod.boolean(),
+  "offersInPerson": zod.boolean(),
+  "imageUrl": zod.string().url().nullable(),
+  "isPublished": zod.boolean(),
+  "displayOrder": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit or publish a professional
+ */
+export const AdminUpdateProfessionalParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const adminUpdateProfessionalBodyNameMax = 120;
+
+export const adminUpdateProfessionalBodyProfessionMax = 120;
+
+export const adminUpdateProfessionalBodyCredentialsMax = 160;
+
+export const adminUpdateProfessionalBodyBioMax = 1000;
+
+export const adminUpdateProfessionalBodySpecialtiesItemMax = 80;
+
+export const adminUpdateProfessionalBodySpecialtiesMax = 12;
+
+export const adminUpdateProfessionalBodyLanguagesItemMax = 60;
+
+export const adminUpdateProfessionalBodyLanguagesMax = 12;
+
+export const adminUpdateProfessionalBodyPhoneMax = 40;
+
+export const adminUpdateProfessionalBodyLocationMax = 160;
+
+export const adminUpdateProfessionalBodyDisplayOrderMin = 0;
+
+
+
+export const AdminUpdateProfessionalBody = zod.object({
+  "name": zod.string().min(1).max(adminUpdateProfessionalBodyNameMax).optional(),
+  "profession": zod.string().min(1).max(adminUpdateProfessionalBodyProfessionMax).optional(),
+  "credentials": zod.string().max(adminUpdateProfessionalBodyCredentialsMax).nullish(),
+  "bio": zod.string().min(1).max(adminUpdateProfessionalBodyBioMax).optional(),
+  "specialties": zod.array(zod.string().min(1).max(adminUpdateProfessionalBodySpecialtiesItemMax)).max(adminUpdateProfessionalBodySpecialtiesMax).optional(),
+  "languages": zod.array(zod.string().min(1).max(adminUpdateProfessionalBodyLanguagesItemMax)).max(adminUpdateProfessionalBodyLanguagesMax).optional(),
+  "phone": zod.string().max(adminUpdateProfessionalBodyPhoneMax).nullish(),
+  "email": zod.string().email().nullish(),
+  "website": zod.string().url().nullish(),
+  "location": zod.string().max(adminUpdateProfessionalBodyLocationMax).nullish(),
+  "offersRemote": zod.boolean().optional(),
+  "offersInPerson": zod.boolean().optional(),
+  "imageUrl": zod.string().url().nullish(),
+  "isPublished": zod.boolean().optional(),
+  "displayOrder": zod.number().min(adminUpdateProfessionalBodyDisplayOrderMin).optional()
+})
+
+export const AdminUpdateProfessionalResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "profession": zod.string(),
+  "credentials": zod.string().nullable(),
+  "bio": zod.string(),
+  "specialties": zod.array(zod.string()),
+  "languages": zod.array(zod.string()),
+  "phone": zod.string().nullable(),
+  "email": zod.string().email().nullable(),
+  "website": zod.string().url().nullable(),
+  "location": zod.string().nullable(),
+  "offersRemote": zod.boolean(),
+  "offersInPerson": zod.boolean(),
+  "imageUrl": zod.string().url().nullable(),
+  "isPublished": zod.boolean(),
+  "displayOrder": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Permanently remove a professional
+ */
+export const AdminDeleteProfessionalParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const AdminDeleteProfessionalResponse = zod.void()
 
 
 /**

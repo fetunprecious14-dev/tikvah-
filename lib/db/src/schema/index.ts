@@ -6,3 +6,4 @@ export * from './conversations';
 export * from './messages';
 export * from './notifications';
 export * from './resources';
+export * from './professionals';

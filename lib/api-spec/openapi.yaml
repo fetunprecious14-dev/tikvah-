@@ -18,6 +18,8 @@ tags:
     description: In-app notifications
   - name: resources
     description: The resource library
+  - name: professionals
+    description: Medical and mental-health professionals available for non-emergency support
   - name: admin
     description: Admin-only conversation review and analytics
 paths:
@@ -357,6 +359,23 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /professionals:
+    get:
+      operationId: listProfessionals
+      tags: [professionals]
+      summary: Browse published professionals
+      parameters:
+        - $ref: "#/components/parameters/Search"
+      responses:
+        "200":
+          description: Published professionals in display order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Professional"
+
   /admin/conversations:
     get:
       operationId: adminListConversations
@@ -567,6 +586,107 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /admin/professionals:
+    get:
+      operationId: adminListProfessionals
+      tags: [admin]
+      summary: List all professionals for management
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: published
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Professionals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Professional"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: adminCreateProfessional
+      tags: [admin]
+      summary: Add a professional
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfessionalRequest"
+      responses:
+        "201":
+          description: Professional created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Professional"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/professionals/{id}:
+    patch:
+      operationId: adminUpdateProfessional
+      tags: [admin]
+      summary: Edit or publish a professional
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfessionalRequest"
+      responses:
+        "200":
+          description: Updated professional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Professional"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: adminDeleteProfessional
+      tags: [admin]
+      summary: Permanently remove a professional
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Professional deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /admin/analytics:
     get:
       operationId: adminGetAnalytics
@@ -888,6 +1008,224 @@ components:
           type: string
           format: date-time
       required: [id, type, title, body, conversationId, read, createdAt]
+
+    Professional:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        profession:
+          type: string
+        credentials:
+          type: string
+          nullable: true
+        bio:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        offersRemote:
+          type: boolean
+        offersInPerson:
+          type: boolean
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        isPublished:
+          type: boolean
+        displayOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - profession
+        - credentials
+        - bio
+        - specialties
+        - languages
+        - phone
+        - email
+        - website
+        - location
+        - offersRemote
+        - offersInPerson
+        - imageUrl
+        - isPublished
+        - displayOrder
+        - createdAt
+        - updatedAt
+
+    CreateProfessionalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        profession:
+          type: string
+          minLength: 1
+          maxLength: 120
+        credentials:
+          type: string
+          maxLength: 160
+          nullable: true
+        bio:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        specialties:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        languages:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        phone:
+          type: string
+          maxLength: 40
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        location:
+          type: string
+          maxLength: 160
+          nullable: true
+        offersRemote:
+          type: boolean
+          default: false
+        offersInPerson:
+          type: boolean
+          default: false
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        isPublished:
+          type: boolean
+          default: false
+        displayOrder:
+          type: integer
+          minimum: 0
+          default: 0
+      required:
+        [
+          name,
+          profession,
+          bio,
+          specialties,
+          languages,
+          offersRemote,
+          offersInPerson,
+          isPublished,
+          displayOrder,
+        ]
+
+    UpdateProfessionalRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        profession:
+          type: string
+          minLength: 1
+          maxLength: 120
+        credentials:
+          type: string
+          maxLength: 160
+          nullable: true
+        bio:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        specialties:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        languages:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        phone:
+          type: string
+          maxLength: 40
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        location:
+          type: string
+          maxLength: 160
+          nullable: true
+        offersRemote:
+          type: boolean
+        offersInPerson:
+          type: boolean
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        isPublished:
+          type: boolean
+        displayOrder:
+          type: integer
+          minimum: 0
 
     Resource:
       type: object

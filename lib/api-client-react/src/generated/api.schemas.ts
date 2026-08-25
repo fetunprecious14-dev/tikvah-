@@ -190,6 +190,115 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface Professional {
+  id: string;
+  name: string;
+  profession: string;
+  credentials: string | null;
+  bio: string;
+  specialties: string[];
+  languages: string[];
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  location: string | null;
+  offersRemote: boolean;
+  offersInPerson: boolean;
+  imageUrl: string | null;
+  isPublished: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProfessionalRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  profession: string;
+  /** @maxLength 160 */
+  credentials?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  bio: string;
+  /**
+     * @maxItems 12
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  specialties: string[];
+  /**
+     * @maxItems 12
+     * @items.minLength 1
+     * @items.maxLength 60
+     */
+  languages: string[];
+  /** @maxLength 40 */
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  /** @maxLength 160 */
+  location?: string | null;
+  offersRemote: boolean;
+  offersInPerson: boolean;
+  imageUrl?: string | null;
+  isPublished: boolean;
+  /** @minimum 0 */
+  displayOrder: number;
+}
+
+export interface UpdateProfessionalRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  profession?: string;
+  /** @maxLength 160 */
+  credentials?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  bio?: string;
+  /**
+     * @maxItems 12
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  specialties?: string[];
+  /**
+     * @maxItems 12
+     * @items.minLength 1
+     * @items.maxLength 60
+     */
+  languages?: string[];
+  /** @maxLength 40 */
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  /** @maxLength 160 */
+  location?: string | null;
+  offersRemote?: boolean;
+  offersInPerson?: boolean;
+  imageUrl?: string | null;
+  isPublished?: boolean;
+  /** @minimum 0 */
+  displayOrder?: number;
+}
+
 export interface Resource {
   id: string;
   title: string;
@@ -280,6 +389,10 @@ topic?: ResourceTopic;
 type?: ResourceType;
 };
 
+export type ListProfessionalsParams = {
+search?: SearchParameter;
+};
+
 export type AdminListConversationsParams = {
 search?: SearchParameter;
 status?: ConversationStatus;
@@ -290,5 +403,10 @@ export type AdminListResourcesParams = {
 search?: SearchParameter;
 topic?: ResourceTopic;
 type?: ResourceType;
+};
+
+export type AdminListProfessionalsParams = {
+search?: SearchParameter;
+published?: boolean;
 };
 

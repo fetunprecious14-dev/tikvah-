@@ -5,12 +5,7 @@ import { useCreateConversation, useResendVerificationEmail } from '@workspace/ap
 import { Shell, Button } from '@/components/shell';
 import { useAuth } from '@/lib/auth';
 
-const quotes = [
-  'You are allowed to take up space.',
-  'You do not have to have the right words. You only have to begin.',
-  'Small steps still move you forward.',
-  'It is okay to not be okay right now.',
-];
+const quotes = ['You are allowed to take up space.', 'You do not have to have the right words. You only have to begin.', 'Small steps still move you forward.', 'It is okay to not be okay right now.'];
 
 const prompts = ['What’s on your mind today?', 'How are you really doing?', 'What feels heavy right now?', 'What would help, even a little?'];
 
@@ -63,7 +58,11 @@ export function Dashboard() {
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/50 px-5 py-4 text-sm">
             <span className="text-muted-foreground">Please verify your email to make sure we can always reach you.</span>
             <button
-              onClick={() => resend.mutate(undefined, { onSuccess: () => setResendDone(true) })}
+              onClick={() =>
+                resend.mutate(undefined, {
+                  onSuccess: () => setResendDone(true),
+                })
+              }
               disabled={resend.isPending || resendDone}
               data-testid="button-resend-verification-dashboard"
               className="font-semibold text-primary underline underline-offset-4 disabled:opacity-60"
@@ -81,7 +80,9 @@ export function Dashboard() {
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="size-2 rounded-full bg-accent" /> New conversation
             </span>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><LockKeyhole size={12} /> Only our team can read this</span>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <LockKeyhole size={12} /> Only our team can read this
+            </span>
           </div>
           <p className="mt-8 font-serif text-3xl leading-tight sm:text-4xl">{prompt}</p>
           <textarea
@@ -95,24 +96,39 @@ export function Dashboard() {
             className="mt-6 min-h-[220px] w-full resize-none rounded-2xl border border-border bg-background/60 p-4 text-[16px] leading-7 outline-none placeholder:text-muted-foreground/60 focus:border-primary sm:min-h-[260px]"
           />
           <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-xs text-muted-foreground">
-              {draftSaved && text ? 'Draft saved on this device.' : text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.'}
-            </span>
+            <span className="text-xs text-muted-foreground">{draftSaved && text ? 'Draft saved on this device.' : text.length > 0 ? `${text.length} characters` : 'No pressure. A sentence is enough.'}</span>
             <div className="flex gap-2">
-              <Button onClick={saveDraft} secondary disabled={!text.trim()} testId="button-save-draft">Save draft</Button>
+              <Button onClick={saveDraft} secondary disabled={!text.trim()} testId="button-save-draft">
+                Save draft
+              </Button>
               <Button onClick={submit} disabled={!text.trim() || createConversation.isPending} testId="button-submit-entry">
-                {createConversation.isPending ? 'Sending…' : <>Send to the Tikvah team <ArrowRight size={15} /></>}
+                {createConversation.isPending ? (
+                  'Sending…'
+                ) : (
+                  <>
+                    Send to the Tikvah team <ArrowRight size={15} />
+                  </>
+                )}
               </Button>
             </div>
           </div>
           {createConversation.isSuccess && (
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-primary"><Check size={13} /> Sent — we'll write back soon.</p>
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-primary">
+              <Check size={13} /> Sent — we'll write back soon.
+            </p>
           )}
         </div>
 
         <div className="reveal reveal-delay-3 mt-10 flex flex-wrap gap-4 text-sm">
-          <Button href="/conversations" secondary testId="button-view-conversations">See your conversations</Button>
-          <Button href="/resources" secondary testId="button-view-resources">Browse the resource library</Button>
+          <Button href="/conversations" secondary testId="button-view-conversations">
+            See your conversations
+          </Button>
+          <Button href="/resources" secondary testId="button-view-resources">
+            Browse the resource library
+          </Button>
+          <Button href="/professionals" secondary testId="button-view-professionals">
+            Find professional help
+          </Button>
         </div>
       </section>
     </Shell>

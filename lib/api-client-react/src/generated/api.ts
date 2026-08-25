@@ -23,6 +23,7 @@ import type {
   AdminConversation,
   AdminConversationDetail,
   AdminListConversationsParams,
+  AdminListProfessionalsParams,
   AdminListResourcesParams,
   Analytics,
   BadRequestResponse,
@@ -30,22 +31,26 @@ import type {
   ConversationDetail,
   CreateConversationRequest,
   CreateMessageRequest,
+  CreateProfessionalRequest,
   CreateResourceRequest,
   Error,
   ForbiddenResponse,
   HealthStatus,
   ListConversationsParams,
+  ListProfessionalsParams,
   ListResourcesParams,
   LoginRequest,
   Message,
   NotFoundResponse,
   Notification,
   PatchConversationRequest,
+  Professional,
   RegisterRequest,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   Resource,
   UnauthorizedResponse,
+  UpdateProfessionalRequest,
   UpdateResourceRequest,
   User,
   VerifyEmailRequest
@@ -1337,6 +1342,90 @@ export const useRecordResourceView = <TError = ErrorType<NotFoundResponse>,
       return useMutation(getRecordResourceViewMutationOptions(options));
     }
 
+export const getListProfessionalsUrl = (params?: ListProfessionalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/professionals?${stringifiedParams}` : `/api/professionals`
+}
+
+/**
+ * @summary Browse published professionals
+ */
+export const listProfessionals = async (params?: ListProfessionalsParams, options?: RequestInit): Promise<Professional[]> => {
+
+  return customFetch<Professional[]>(getListProfessionalsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfessionalsQueryKey = (params?: ListProfessionalsParams,) => {
+    return [
+    `/api/professionals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProfessionalsQueryOptions = <TData = Awaited<ReturnType<typeof listProfessionals>>, TError = ErrorType<unknown>>(params?: ListProfessionalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfessionals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfessionalsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfessionals>>> = ({ signal }) => listProfessionals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfessionals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfessionalsQueryResult = NonNullable<Awaited<ReturnType<typeof listProfessionals>>>
+export type ListProfessionalsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Browse published professionals
+ */
+
+export function useListProfessionals<TData = Awaited<ReturnType<typeof listProfessionals>>, TError = ErrorType<unknown>>(
+ params?: ListProfessionalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfessionals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfessionalsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getAdminListConversationsUrl = (params?: AdminListConversationsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1938,6 +2027,304 @@ export const useAdminDeleteResource = <TError = ErrorType<UnauthorizedResponse |
         TContext
       > => {
       return useMutation(getAdminDeleteResourceMutationOptions(options));
+    }
+
+export const getAdminListProfessionalsUrl = (params?: AdminListProfessionalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/professionals?${stringifiedParams}` : `/api/admin/professionals`
+}
+
+/**
+ * @summary List all professionals for management
+ */
+export const adminListProfessionals = async (params?: AdminListProfessionalsParams, options?: RequestInit): Promise<Professional[]> => {
+
+  return customFetch<Professional[]>(getAdminListProfessionalsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListProfessionalsQueryKey = (params?: AdminListProfessionalsParams,) => {
+    return [
+    `/api/admin/professionals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListProfessionalsQueryOptions = <TData = Awaited<ReturnType<typeof adminListProfessionals>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: AdminListProfessionalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListProfessionals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListProfessionalsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListProfessionals>>> = ({ signal }) => adminListProfessionals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListProfessionals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListProfessionalsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListProfessionals>>>
+export type AdminListProfessionalsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List all professionals for management
+ */
+
+export function useAdminListProfessionals<TData = Awaited<ReturnType<typeof adminListProfessionals>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: AdminListProfessionalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListProfessionals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListProfessionalsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateProfessionalUrl = () => {
+
+
+
+
+  return `/api/admin/professionals`
+}
+
+/**
+ * @summary Add a professional
+ */
+export const adminCreateProfessional = async (createProfessionalRequest: CreateProfessionalRequest, options?: RequestInit): Promise<Professional> => {
+
+  return customFetch<Professional>(getAdminCreateProfessionalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createProfessionalRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateProfessionalMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateProfessional>>, TError,{data: BodyType<CreateProfessionalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateProfessional>>, TError,{data: BodyType<CreateProfessionalRequest>}, TContext> => {
+
+const mutationKey = ['adminCreateProfessional'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateProfessional>>, {data: BodyType<CreateProfessionalRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateProfessional(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateProfessionalMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateProfessional>>>
+    export type AdminCreateProfessionalMutationBody = BodyType<CreateProfessionalRequest>
+    export type AdminCreateProfessionalMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+    /**
+ * @summary Add a professional
+ */
+export const useAdminCreateProfessional = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateProfessional>>, TError,{data: BodyType<CreateProfessionalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateProfessional>>,
+        TError,
+        {data: BodyType<CreateProfessionalRequest>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateProfessionalMutationOptions(options));
+    }
+
+export const getAdminUpdateProfessionalUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/professionals/${id}`
+}
+
+/**
+ * @summary Edit or publish a professional
+ */
+export const adminUpdateProfessional = async (id: string,
+    updateProfessionalRequest: UpdateProfessionalRequest, options?: RequestInit): Promise<Professional> => {
+
+  return customFetch<Professional>(getAdminUpdateProfessionalUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateProfessionalRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateProfessionalMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateProfessional>>, TError,{id: string;data: BodyType<UpdateProfessionalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateProfessional>>, TError,{id: string;data: BodyType<UpdateProfessionalRequest>}, TContext> => {
+
+const mutationKey = ['adminUpdateProfessional'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateProfessional>>, {id: string;data: BodyType<UpdateProfessionalRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateProfessional(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateProfessionalMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateProfessional>>>
+    export type AdminUpdateProfessionalMutationBody = BodyType<UpdateProfessionalRequest>
+    export type AdminUpdateProfessionalMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Edit or publish a professional
+ */
+export const useAdminUpdateProfessional = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateProfessional>>, TError,{id: string;data: BodyType<UpdateProfessionalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateProfessional>>,
+        TError,
+        {id: string;data: BodyType<UpdateProfessionalRequest>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateProfessionalMutationOptions(options));
+    }
+
+export const getAdminDeleteProfessionalUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/professionals/${id}`
+}
+
+/**
+ * @summary Permanently remove a professional
+ */
+export const adminDeleteProfessional = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteProfessionalUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteProfessionalMutationOptions = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProfessional>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProfessional>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['adminDeleteProfessional'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteProfessional>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteProfessional(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteProfessionalMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteProfessional>>>
+
+    export type AdminDeleteProfessionalMutationError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Permanently remove a professional
+ */
+export const useAdminDeleteProfessional = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProfessional>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteProfessional>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteProfessionalMutationOptions(options));
     }
 
 export const getAdminGetAnalyticsUrl = () => {

@@ -37,8 +37,7 @@ export function Resources() {
   return (
     <Shell>
       <PageIntro eyebrow="A shelf for the hard days" title={<>Useful things, when you need them.</>}>
-        Articles, exercises, prompts, and quiet reminders for the moments that don't fit neatly into a search box. Take one
-        thing. Leave the rest.
+        Articles, exercises, prompts, and quiet reminders for the moments that don't fit neatly into a search box. Take one thing. Leave the rest.
       </PageIntro>
       <section className="mx-auto max-w-[1220px] px-5 pb-24 sm:px-8">
         <div className="flex flex-col gap-4 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -57,13 +56,7 @@ export function Resources() {
           </div>
           <label className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground sm:w-64">
             <Search size={15} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              data-testid="input-resource-search"
-              className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
-              placeholder="Search the shelf"
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} data-testid="input-resource-search" className="w-full bg-transparent outline-none placeholder:text-muted-foreground" placeholder="Search the shelf" />
           </label>
         </div>
 
@@ -98,6 +91,15 @@ export function Resources() {
             </button>
           </div>
         )}
+        <div className="mx-auto mt-16 max-w-2xl border-t border-border pt-10 text-center">
+          <h2 className="font-serif text-3xl">Looking for care from a person?</h2>
+          <p className="mt-4 text-[15px] leading-7 text-muted-foreground">The professional directory can help you find non-emergency support and contact a provider directly.</p>
+          <div className="mt-6 flex justify-center">
+            <Button href="/professionals" secondary testId="button-resources-professionals">
+              Find professional help
+            </Button>
+          </div>
+        </div>
       </section>
 
       {active && (
@@ -108,7 +110,9 @@ export function Resources() {
                 <X size={17} />
               </button>
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-primary">{active.type} · {active.topic}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-primary">
+              {active.type} · {active.topic}
+            </p>
             <h2 className="mt-3 font-serif text-4xl leading-tight">{active.title}</h2>
             <p className="mt-5 text-[15px] leading-7 text-muted-foreground">{active.description}</p>
             {active.body && <div className="mt-7 rounded-xl bg-secondary/70 p-5 text-sm leading-7">{active.body}</div>}
@@ -124,7 +128,9 @@ export function Resources() {
                   Open resource <ExternalLink size={14} />
                 </a>
               )}
-              <Button onClick={() => setActive(null)} secondary testId="button-close-resource-continue">I have enough for now</Button>
+              <Button onClick={() => setActive(null)} secondary testId="button-close-resource-continue">
+                I have enough for now
+              </Button>
             </div>
           </div>
         </div>
