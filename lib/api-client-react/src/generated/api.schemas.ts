@@ -190,6 +190,24 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface PushVapidPublicKey {
+  publicKey: string | null;
+}
+
+export type PushSubscriptionRequestKeys = {
+  p256dh: string;
+  auth: string;
+};
+
+export interface PushSubscriptionRequest {
+  endpoint: string;
+  keys: PushSubscriptionRequestKeys;
+}
+
+export interface UnsubscribeFromPushRequest {
+  endpoint: string;
+}
+
 export interface Professional {
   id: string;
   name: string;

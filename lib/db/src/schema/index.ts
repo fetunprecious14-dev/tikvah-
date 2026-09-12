@@ -5,5 +5,6 @@ export * from './passwordResetTokens';
 export * from './conversations';
 export * from './messages';
 export * from './notifications';
+export * from './pushSubscriptions';
 export * from './resources';
 export * from './professionals';

@@ -45,11 +45,14 @@ import type {
   Notification,
   PatchConversationRequest,
   Professional,
+  PushSubscriptionRequest,
+  PushVapidPublicKey,
   RegisterRequest,
   RequestPasswordResetRequest,
   ResetPasswordRequest,
   Resource,
   UnauthorizedResponse,
+  UnsubscribeFromPushRequest,
   UpdateProfessionalRequest,
   UpdateResourceRequest,
   User,
@@ -1185,6 +1188,225 @@ export const useMarkNotificationRead = <TError = ErrorType<UnauthorizedResponse 
         TContext
       > => {
       return useMutation(getMarkNotificationReadMutationOptions(options));
+    }
+
+export const getGetPushVapidPublicKeyUrl = () => {
+
+
+
+
+  return `/api/push/vapid-public-key`
+}
+
+/**
+ * @summary Get the public key browsers need to create a push subscription
+ */
+export const getPushVapidPublicKey = async ( options?: RequestInit): Promise<PushVapidPublicKey> => {
+
+  return customFetch<PushVapidPublicKey>(getGetPushVapidPublicKeyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPushVapidPublicKeyQueryKey = () => {
+    return [
+    `/api/push/vapid-public-key`
+    ] as const;
+    }
+
+
+export const getGetPushVapidPublicKeyQueryOptions = <TData = Awaited<ReturnType<typeof getPushVapidPublicKey>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPushVapidPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPushVapidPublicKeyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPushVapidPublicKey>>> = ({ signal }) => getPushVapidPublicKey({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPushVapidPublicKey>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPushVapidPublicKeyQueryResult = NonNullable<Awaited<ReturnType<typeof getPushVapidPublicKey>>>
+export type GetPushVapidPublicKeyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the public key browsers need to create a push subscription
+ */
+
+export function useGetPushVapidPublicKey<TData = Awaited<ReturnType<typeof getPushVapidPublicKey>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPushVapidPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPushVapidPublicKeyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubscribeToPushUrl = () => {
+
+
+
+
+  return `/api/push/subscribe`
+}
+
+/**
+ * @summary Register a browser push subscription for the signed-in user
+ */
+export const subscribeToPush = async (pushSubscriptionRequest: PushSubscriptionRequest, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getSubscribeToPushUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushSubscriptionRequest)
+  }
+);}
+
+
+
+
+
+export const getSubscribeToPushMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribeToPush>>, TError,{data: BodyType<PushSubscriptionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof subscribeToPush>>, TError,{data: BodyType<PushSubscriptionRequest>}, TContext> => {
+
+const mutationKey = ['subscribeToPush'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof subscribeToPush>>, {data: BodyType<PushSubscriptionRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  subscribeToPush(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubscribeToPushMutationResult = NonNullable<Awaited<ReturnType<typeof subscribeToPush>>>
+    export type SubscribeToPushMutationBody = BodyType<PushSubscriptionRequest>
+    export type SubscribeToPushMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Register a browser push subscription for the signed-in user
+ */
+export const useSubscribeToPush = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribeToPush>>, TError,{data: BodyType<PushSubscriptionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof subscribeToPush>>,
+        TError,
+        {data: BodyType<PushSubscriptionRequest>},
+        TContext
+      > => {
+      return useMutation(getSubscribeToPushMutationOptions(options));
+    }
+
+export const getUnsubscribeFromPushUrl = () => {
+
+
+
+
+  return `/api/push/unsubscribe`
+}
+
+/**
+ * @summary Remove a browser push subscription for the signed-in user
+ */
+export const unsubscribeFromPush = async (unsubscribeFromPushRequest: UnsubscribeFromPushRequest, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnsubscribeFromPushUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(unsubscribeFromPushRequest)
+  }
+);}
+
+
+
+
+
+export const getUnsubscribeFromPushMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribeFromPush>>, TError,{data: BodyType<UnsubscribeFromPushRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unsubscribeFromPush>>, TError,{data: BodyType<UnsubscribeFromPushRequest>}, TContext> => {
+
+const mutationKey = ['unsubscribeFromPush'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unsubscribeFromPush>>, {data: BodyType<UnsubscribeFromPushRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unsubscribeFromPush(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnsubscribeFromPushMutationResult = NonNullable<Awaited<ReturnType<typeof unsubscribeFromPush>>>
+    export type UnsubscribeFromPushMutationBody = BodyType<UnsubscribeFromPushRequest>
+    export type UnsubscribeFromPushMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Remove a browser push subscription for the signed-in user
+ */
+export const useUnsubscribeFromPush = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribeFromPush>>, TError,{data: BodyType<UnsubscribeFromPushRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unsubscribeFromPush>>,
+        TError,
+        {data: BodyType<UnsubscribeFromPushRequest>},
+        TContext
+      > => {
+      return useMutation(getUnsubscribeFromPushMutationOptions(options));
     }
 
 export const getListResourcesUrl = (params?: ListResourcesParams,) => {

@@ -1,0 +1,16 @@
+{
+  "name": "@workspace/webpush",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/web-push": "^3.6.4"
+  }
+}

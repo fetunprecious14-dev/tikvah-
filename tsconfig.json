@@ -20,6 +20,9 @@
     },
     {
       "path": "./lib/integrations/telegram"
+    },
+    {
+      "path": "./lib/integrations/webpush"
     }
   ]
 }

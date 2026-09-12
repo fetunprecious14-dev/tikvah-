@@ -4,6 +4,7 @@ import {
   conversationsTable,
   messagesTable,
   notificationsTable,
+  pushSubscriptionsTable,
   usersTable,
   type Conversation,
   type Message,
@@ -11,6 +12,7 @@ import {
 import { sendEmail, replyNotificationEmail, urgentAlertEmail, newMessageEmail } from "@workspace/email";
 import { sendSms } from "@workspace/sms";
 import { sendTelegramMessage } from "@workspace/telegram";
+import { sendWebPush } from "@workspace/webpush";
 import { assessSafety } from "./safety";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -76,16 +78,41 @@ async function notifyUserOfReply(conversation: Conversation): Promise<void> {
     conversationId: conversation.id,
   });
 
+  const conversationUrl = `${config.appUrl}/conversations/${conversation.id}`;
+
   try {
-    await sendEmail(
-      replyNotificationEmail({
-        to: user.email,
-        name: user.name,
-        conversationUrl: `${config.appUrl}/conversations/${conversation.id}`,
-      }),
-    );
+    await sendEmail(replyNotificationEmail({ to: user.email, name: user.name, conversationUrl }));
   } catch (error) {
     logger.error({ error, conversationId: conversation.id }, "Failed to send reply notification email");
+  }
+
+  await pushToUserDevices(user.id, {
+    title: "You have a reply",
+    body: "A member of the Tikvah team has written back to you.",
+    url: conversationUrl,
+  });
+}
+
+/**
+ * Sends a Web Push notification to every device the user has subscribed on.
+ * A subscription the push service reports as gone (uninstalled app, revoked
+ * permission) is pruned so we stop trying it.
+ */
+async function pushToUserDevices(userId: string, payload: { title: string; body: string; url: string }): Promise<void> {
+  const subscriptions = await db.select().from(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.userId, userId));
+
+  for (const subscription of subscriptions) {
+    try {
+      const result = await sendWebPush({
+        subscription: { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
+        payload,
+      });
+      if ("expired" in result && result.expired) {
+        await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.id, subscription.id));
+      }
+    } catch (error) {
+      logger.error({ error, userId, subscriptionId: subscription.id }, "Failed to send push notification");
+    }
   }
 }
 

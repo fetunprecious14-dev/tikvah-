@@ -272,6 +272,38 @@ export const MarkNotificationReadResponse = zod.object({
 
 
 /**
+ * @summary Get the public key browsers need to create a push subscription
+ */
+export const GetPushVapidPublicKeyResponse = zod.object({
+  "publicKey": zod.string().nullable()
+})
+
+
+/**
+ * @summary Register a browser push subscription for the signed-in user
+ */
+export const SubscribeToPushBody = zod.object({
+  "endpoint": zod.string().url(),
+  "keys": zod.object({
+  "p256dh": zod.string(),
+  "auth": zod.string()
+})
+})
+
+export const SubscribeToPushResponse = zod.void()
+
+
+/**
+ * @summary Remove a browser push subscription for the signed-in user
+ */
+export const UnsubscribeFromPushBody = zod.object({
+  "endpoint": zod.string().url()
+})
+
+export const UnsubscribeFromPushResponse = zod.void()
+
+
+/**
  * @summary Browse the resource library
  */
 export const ListResourcesQueryParams = zod.object({

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Bell } from 'lucide-react';
+import { Bell, BellOff, BellRing } from 'lucide-react';
 import { useListNotifications, useMarkNotificationRead, getListNotificationsQueryKey } from '@workspace/api-client-react';
 import { queryClient } from '@/lib/queryClient';
+import { usePushSubscription } from '@/lib/use-push-subscription';
 
 function timeAgo(date: Date): string {
   const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
@@ -23,6 +24,7 @@ export function NotificationsMenu() {
   // contract is an array; retain an empty state until it returns one.
   const notifications = Array.isArray(notificationData) ? notificationData : [];
   const markRead = useMarkNotificationRead();
+  const push = usePushSubscription();
 
   const unreadCount = notifications.filter(notification => !notification.read).length;
 
@@ -61,6 +63,28 @@ export function NotificationsMenu() {
           />
           <div className="absolute right-0 z-40 mt-3 w-80 max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-soft)]">
             <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Notifications</p>
+            {push.canOffer && push.state === 'available' && (
+              <button
+                onClick={() => push.subscribe()}
+                disabled={push.isBusy}
+                data-testid="button-enable-push"
+                className="mb-1 flex w-full items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2.5 text-left text-sm font-medium transition hover:bg-secondary disabled:opacity-60"
+              >
+                <BellRing size={15} className="shrink-0 text-primary" />
+                Get notified here when we reply
+              </button>
+            )}
+            {push.state === 'subscribed' && (
+              <button
+                onClick={() => push.unsubscribe()}
+                disabled={push.isBusy}
+                data-testid="button-disable-push"
+                className="mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-muted-foreground transition hover:bg-secondary disabled:opacity-60"
+              >
+                <BellOff size={13} className="shrink-0" />
+                Turn off notifications on this device
+              </button>
+            )}
             {notifications.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nothing new yet.</p>
             ) : (
