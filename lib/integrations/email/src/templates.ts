@@ -1,5 +1,12 @@
 import type { SendEmailInput } from './sendEmail';
 
+const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+/** Escapes free-form user text before it's interpolated into an HTML email body. */
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]!);
+}
+
 function wrap(preheader: string, bodyHtml: string): string {
   return `<!doctype html>
 <html>
@@ -56,6 +63,20 @@ export function passwordResetEmail(params: { to: string; name: string; resetUrl:
        <p style="font-size:15px;line-height:1.6;margin:0 0 24px;">We received a request to reset your Tikvah password. This link is valid for one hour.</p>
        <a href="${params.resetUrl}" style="display:inline-block;background:#3b5b46;color:#f4efe4;text-decoration:none;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;">Choose a new password</a>
        <p style="font-size:13px;line-height:1.6;color:#7a8a7e;margin-top:24px;">If you didn't ask for this, you can safely ignore this email — your password won't change.</p>`,
+    ),
+  };
+}
+
+export function newMessageEmail(params: { to: string; userName: string; preview: string; conversationUrl: string }): SendEmailInput {
+  return {
+    to: params.to,
+    subject: `New message from ${params.userName}`,
+    text: `${params.userName} sent a new message:\n\n"${params.preview}"\n\nReview it here: ${params.conversationUrl}`,
+    html: wrap(
+      `${escapeHtml(params.userName)} sent a new message.`,
+      `<h1 style="font-size:24px;font-weight:600;margin:0 0 16px;">New message from ${escapeHtml(params.userName)}</h1>
+       <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#233a2c;">"${escapeHtml(params.preview)}"</p>
+       <a href="${params.conversationUrl}" style="display:inline-block;background:#3b5b46;color:#f4efe4;text-decoration:none;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;">Review it</a>`,
     ),
   };
 }

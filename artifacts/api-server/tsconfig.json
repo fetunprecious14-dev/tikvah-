@@ -20,6 +20,9 @@
     },
     {
       "path": "../../lib/integrations/sms"
+    },
+    {
+      "path": "../../lib/integrations/telegram"
     }
   ]
 }

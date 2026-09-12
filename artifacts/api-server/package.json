@@ -14,6 +14,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/email": "workspace:*",
     "@workspace/sms": "workspace:*",
+    "@workspace/telegram": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",

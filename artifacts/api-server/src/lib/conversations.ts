@@ -8,8 +8,9 @@ import {
   type Conversation,
   type Message,
 } from "@workspace/db";
-import { sendEmail, replyNotificationEmail, urgentAlertEmail } from "@workspace/email";
+import { sendEmail, replyNotificationEmail, urgentAlertEmail, newMessageEmail } from "@workspace/email";
 import { sendSms } from "@workspace/sms";
+import { sendTelegramMessage } from "@workspace/telegram";
 import { assessSafety } from "./safety";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -56,8 +57,8 @@ export async function appendMessage(params: {
     await notifyUserOfReply(conversation);
   }
 
-  if (isUrgent) {
-    await alertAdminOfUrgentMessage(conversation, safety.categories);
+  if (senderType === "user") {
+    await notifyAdminOfNewMessage(conversation, message, isUrgent, safety.categories);
   }
 
   return message;
@@ -88,11 +89,18 @@ async function notifyUserOfReply(conversation: Conversation): Promise<void> {
   }
 }
 
-async function alertAdminOfUrgentMessage(conversation: Conversation, categories: string[]): Promise<void> {
-  if (!config.adminAlertEmail && !config.adminAlertPhone) {
+/**
+ * Notifies the admin of every new user message (via email and/or Telegram, whichever
+ * is configured), and additionally texts ADMIN_ALERT_PHONE when the message was
+ * flagged urgent — SMS costs per message, so it stays reserved for the cases that
+ * genuinely can't wait.
+ */
+async function notifyAdminOfNewMessage(conversation: Conversation, message: Message, isUrgent: boolean, categories: string[]): Promise<void> {
+  const hasAnyChannel = Boolean(config.adminAlertEmail || config.adminAlertTelegramChatId || (isUrgent && config.adminAlertPhone));
+  if (!hasAnyChannel) {
     logger.warn(
-      { conversationId: conversation.id, categories },
-      "Urgent message flagged, but neither ADMIN_ALERT_EMAIL nor ADMIN_ALERT_PHONE is set — no alert sent",
+      { conversationId: conversation.id, isUrgent },
+      "New user message, but no admin alert channel is configured (ADMIN_ALERT_EMAIL, TELEGRAM_CHAT_ID, or ADMIN_ALERT_PHONE for urgent messages) — no alert sent",
     );
     return;
   }
@@ -100,16 +108,31 @@ async function alertAdminOfUrgentMessage(conversation: Conversation, categories:
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, conversation.userId)).limit(1);
   const userName = user?.name ?? "A Tikvah user";
   const conversationUrl = `${config.appUrl}/admin/conversations/${conversation.id}`;
+  const preview = message.body.length > 160 ? `${message.body.slice(0, 159)}…` : message.body;
 
   if (config.adminAlertEmail) {
     try {
-      await sendEmail(urgentAlertEmail({ to: config.adminAlertEmail, userName, categories, conversationUrl }));
+      const email = isUrgent
+        ? urgentAlertEmail({ to: config.adminAlertEmail, userName, categories, conversationUrl })
+        : newMessageEmail({ to: config.adminAlertEmail, userName, preview, conversationUrl });
+      await sendEmail(email);
     } catch (error) {
-      logger.error({ error, conversationId: conversation.id }, "Failed to send urgent alert email");
+      logger.error({ error, conversationId: conversation.id }, "Failed to send admin alert email");
     }
   }
 
-  if (config.adminAlertPhone) {
+  if (config.adminAlertTelegramChatId) {
+    try {
+      const text = isUrgent
+        ? `🚨 Urgent submission from ${userName} (${categories.join(', ')}).\n${conversationUrl}`
+        : `New message from ${userName}:\n"${preview}"\n${conversationUrl}`;
+      await sendTelegramMessage({ text });
+    } catch (error) {
+      logger.error({ error, conversationId: conversation.id }, "Failed to send admin alert Telegram message");
+    }
+  }
+
+  if (isUrgent && config.adminAlertPhone) {
     try {
       await sendSms({
         to: config.adminAlertPhone,

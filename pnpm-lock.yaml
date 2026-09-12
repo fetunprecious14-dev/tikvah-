@@ -177,6 +177,9 @@ importers:
       '@workspace/sms':
         specifier: workspace:*
         version: link:../../lib/integrations/sms
+      '@workspace/telegram':
+        specifier: workspace:*
+        version: link:../../lib/integrations/telegram
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -658,6 +661,12 @@ importers:
         version: 25.9.5
 
   lib/integrations/sms:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.5
+
+  lib/integrations/telegram:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
