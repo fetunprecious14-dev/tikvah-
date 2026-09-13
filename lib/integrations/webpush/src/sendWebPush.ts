@@ -52,10 +52,16 @@ function ensureVapidConfigured(): boolean {
  */
 export async function sendWebPush(input: SendWebPushInput): Promise<SendWebPushResult> {
   if (!ensureVapidConfigured()) {
-    console.info(
-      `[webpush:log-only] No VAPID keys configured — logging instead of sending.\n` +
-        `  endpoint: ${input.subscription.endpoint}\n  payload: ${JSON.stringify(input.payload)}`,
-    );
+    // The endpoint identifies a user's device and the payload carries notification
+    // content — never write either to logs in production.
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[webpush:log-only] No VAPID keys configured — push not sent; contents withheld from logs.');
+    } else {
+      console.info(
+        `[webpush:log-only] No VAPID keys configured — logging instead of sending.\n` +
+          `  endpoint: ${input.subscription.endpoint}\n  payload: ${JSON.stringify(input.payload)}`,
+      );
+    }
     return { delivered: false, provider: 'log' };
   }
 
