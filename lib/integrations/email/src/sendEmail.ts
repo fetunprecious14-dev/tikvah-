@@ -23,10 +23,16 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = process.env.EMAIL_FROM ?? 'Tikvah <onboarding@resend.dev>';
 
   if (!apiKey) {
-    console.info(
-      `[email:log-only] No RESEND_API_KEY configured — logging instead of sending.\n` +
-        `  to: ${input.to}\n  subject: ${input.subject}\n  text: ${input.text}`,
-    );
+    // Bodies carry verification/reset links whose token is a live credential, plus
+    // recipient PII — never write them to logs in production.
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[email:log-only] No RESEND_API_KEY configured — email not sent; contents withheld from logs.');
+    } else {
+      console.info(
+        `[email:log-only] No RESEND_API_KEY configured — logging instead of sending.\n` +
+          `  to: ${input.to}\n  subject: ${input.subject}\n  text: ${input.text}`,
+      );
+    }
     return { delivered: false, provider: 'log' };
   }
 

@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, usersTable, emailVerificationTokensTable, passwordResetTokensTable, sessionsTable } from "@workspace/db";
 import { RegisterUserBody, LoginUserBody, VerifyEmailBody, RequestPasswordResetBody, ResetPasswordBody } from "@workspace/api-zod";
@@ -13,6 +14,11 @@ import { config } from "../lib/config";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+// Verified against when no account matches, so a missing account costs the same
+// scrypt work as a wrong password and login latency can't reveal which emails
+// are registered (mirrors the always-204 behaviour of /auth/request-password-reset).
+const dummyPasswordHash = hashPassword(randomBytes(32).toString("hex"));
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -73,13 +79,8 @@ router.post("/auth/login", authRateLimit, validateBody(LoginUserBody), async (re
   let [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
   const invalidCredentialsMessage = "That email and password combination doesn't match our records.";
 
-  if (!user) {
-    res.status(401).json({ message: invalidCredentialsMessage });
-    return;
-  }
-
-  const passwordOk = await verifyPassword(password, user.passwordHash);
-  if (!passwordOk) {
+  const passwordOk = await verifyPassword(password, user?.passwordHash ?? (await dummyPasswordHash));
+  if (!user || !passwordOk) {
     res.status(401).json({ message: invalidCredentialsMessage });
     return;
   }

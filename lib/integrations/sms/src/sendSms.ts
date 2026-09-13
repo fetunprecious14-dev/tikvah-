@@ -23,7 +23,12 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
   const from = process.env.TWILIO_FROM_NUMBER;
 
   if (!accountSid || !authToken || !from) {
-    console.info(`[sms:log-only] No Twilio credentials configured — logging instead of sending.\n  to: ${input.to}\n  body: ${input.body}`);
+    // Alert bodies carry a user's name and risk categories — never log them in production.
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[sms:log-only] No Twilio credentials configured — SMS not sent; contents withheld from logs.');
+    } else {
+      console.info(`[sms:log-only] No Twilio credentials configured — logging instead of sending.\n  to: ${input.to}\n  body: ${input.body}`);
+    }
     return { delivered: false, provider: 'log' };
   }
 

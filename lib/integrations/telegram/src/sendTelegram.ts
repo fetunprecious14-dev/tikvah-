@@ -21,7 +21,12 @@ export async function sendTelegramMessage(input: SendTelegramInput): Promise<Sen
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!botToken || !chatId) {
-    console.info(`[telegram:log-only] No TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID configured — logging instead of sending.\n  text: ${input.text}`);
+    // Alert text carries a user's name, message preview and risk categories — never log it in production.
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[telegram:log-only] No TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID configured — message not sent; contents withheld from logs.');
+    } else {
+      console.info(`[telegram:log-only] No TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID configured — logging instead of sending.\n  text: ${input.text}`);
+    }
     return { delivered: false, provider: 'log' };
   }
 
